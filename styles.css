@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TOKENS DE DISEÑO E IDENTIDAD VISUAL (Basado en index.html)
+   TOKENS DE DISEÑO E IDENTIDAD VISUAL 
    ========================================================================== */
 :root {
   --bg-page: #F5F7F5;
@@ -14,11 +14,9 @@
   
   --cat-consulta: #A9782F;
   --cat-cirugia: #9C4A3E;
-  --cat-laboratorio: #2E7D6B;
   
-  --font-title: "Source Serif 4", Georgia, serif;
   --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
+  --font-title: "Source Serif 4", Georgia, serif;
   
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -43,149 +41,67 @@ body {
   background-color: var(--bg-page);
   color: var(--text-primary);
   line-height: 1.5;
-  padding: 24px 16px;
-  max-width: 1100px;
+  padding: 32px 20px;
+  max-width: 900px;
   margin: 0 auto;
   -webkit-font-smoothing: antialiased;
 }
 
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 0;
-  background: var(--accent-primary);
-  color: #fff;
-  padding: 8px 16px;
-  z-index: 100;
-  text-decoration: none;
-  border-radius: var(--radius-sm);
-  transition: top 0.2s;
-}
-
-.skip-link:focus {
-  top: 10px;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
-
 /* ==========================================================================
-   ENCABEZADO DE LA APLICACIÓN
+   FORMULARIOS Y BÚSQUEDA
    ========================================================================== */
-.app-header {
+form {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--bg-surface);
-  padding: 20px 24px;
-  border: 1px solid var(--border-color);
+  flex-direction: column;
+  gap: 16px;
+}
+
+#form-buscar-paciente {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-bottom: 28px;
+  background: var(--bg-surface);
+  padding: 16px;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  margin-bottom: 24px;
-}
-
-.app-header__title {
-  font-family: var(--font-title);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.app-header__subtitle {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-.app-header__status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-page);
-  padding: 6px 12px;
-  border-radius: 20px;
   border: 1px solid var(--border-color);
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.status-dot--online {
-  background-color: #2e7d32;
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
-}
-
-/* ==========================================================================
-   BARRA DE BÚSQUEDA Y BOTONES
-   ========================================================================== */
-.search-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 28px;
-}
-
-.search-bar__form {
-  display: flex;
+#input-buscar-paciente {
   flex: 1;
-  min-width: 320px;
-  gap: 10px;
 }
 
-.search-bar__field {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.search-bar__icon {
-  position: absolute;
-  left: 14px;
-  width: 18px;
-  height: 18px;
-  color: var(--text-secondary);
-  pointer-events: none;
-}
-
-.search-bar__input {
-  width: 100%;
-  padding: 12px 14px 12px 42px;
+input, select, textarea {
   font-family: var(--font-body);
   font-size: 0.95rem;
+  padding: 12px 14px;
   color: var(--text-primary);
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
 }
 
-.search-bar__input:focus {
+input:focus, select:focus, textarea:focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(31, 78, 95, 0.15);
 }
 
-.btn {
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ==========================================================================
+   BOTONES
+   ========================================================================== */
+button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   padding: 12px 20px;
   font-family: var(--font-body);
   font-size: 0.925rem;
@@ -194,70 +110,29 @@ body {
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.btn--primary {
   background-color: var(--accent-primary);
   color: #ffffff;
 }
 
-.btn--primary:hover {
+button:hover {
   background-color: var(--accent-primary-hover);
 }
 
-.btn--secondary {
-  background-color: var(--bg-surface);
-  color: var(--accent-primary);
-  border-color: var(--accent-primary);
-}
-
-.btn--secondary:hover {
-  background-color: rgba(31, 78, 95, 0.08);
-}
-
-.btn--outline {
-  background-color: transparent;
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
-
-.btn--outline:hover {
-  background-color: var(--bg-surface);
-  border-color: var(--text-secondary);
-}
-
-.btn--ghost {
+button[data-modal-close] {
   background-color: transparent;
   color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
-.btn--ghost:hover {
+button[data-modal-close]:hover {
   background-color: var(--bg-page);
   color: var(--text-primary);
 }
 
-.btn--link {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--accent-primary);
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.btn--link:hover {
-  color: var(--accent-primary-hover);
-}
-
 /* ==========================================================================
-   ESTADO VACÍO
+   ESTADO VACÍO Y FICHA DEL PACIENTE
    ========================================================================== */
-.empty-state {
+#estado-vacio {
   text-align: center;
   padding: 48px 24px;
   background-color: var(--bg-surface);
@@ -265,78 +140,47 @@ body {
   border-radius: var(--radius-lg);
   color: var(--text-secondary);
   font-size: 1.05rem;
-  margin-bottom: 28px;
+  margin-top: 24px;
 }
 
-/* ==========================================================================
-   FICHA DEL PACIENTE
-   ========================================================================== */
-.patient-card {
+#ficha-paciente {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-left: 5px solid var(--accent-primary);
   border-radius: var(--radius-lg);
   padding: 24px;
   box-shadow: var(--shadow-sm);
+  margin-top: 24px;
   margin-bottom: 32px;
 }
 
-.patient-card__name {
+#ficha-paciente-nombre {
   font-family: var(--font-title);
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 16px;
 }
 
-.patient-card__details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px 24px;
+#ficha-paciente p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
 }
 
-.patient-card__detail dt {
-  font-size: 0.775rem;
-  font-weight: 600;
+#ficha-paciente p strong {
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
-
-.patient-card__detail dd {
-  font-size: 1rem;
-  font-weight: 500;
   color: var(--text-primary);
-}
-
-.patient-card__detail--wide {
-  grid-column: 1 / -1;
-}
-
-.patient-card__alergias {
-  display: inline-block;
-  background-color: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-}
-
-.patient-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
+  display: block;
+  margin-top: 12px;
 }
 
 /* ==========================================================================
-   LÍNEA DE TIEMPO (TIMELINE)
+   LÍNEA DE TIEMPO (HISTORIAL CLÍNICO)
    ========================================================================== */
-.timeline-section {
+#seccion-historial {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -344,29 +188,21 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-.timeline-section__header {
-  margin-bottom: 24px;
-}
-
-.timeline-section__header h2 {
+#seccion-historial h3 {
   font-family: var(--font-title);
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--text-primary);
+  margin-bottom: 24px;
 }
 
-.timeline-section__hint {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.timeline {
+#timeline-lista {
   list-style: none;
   position: relative;
   padding-left: 24px;
 }
 
-.timeline::before {
+#timeline-lista::before {
   content: '';
   position: absolute;
   left: 7px;
@@ -376,18 +212,25 @@ body {
   background-color: var(--border-color);
 }
 
-.timeline__entry {
+#timeline-lista li {
   position: relative;
-  margin-bottom: 28px;
+  background-color: var(--bg-page);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.timeline__entry:last-child {
-  margin-bottom: 0;
+#timeline-lista li:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-.timeline__marker {
+#timeline-lista li::before {
+  content: '';
   position: absolute;
-  left: -24px;
+  left: -29px;
   top: 18px;
   width: 12px;
   height: 12px;
@@ -397,263 +240,77 @@ body {
   box-shadow: 0 0 0 2px var(--border-color);
 }
 
-.timeline__entry--consulta .timeline__marker { background-color: var(--cat-consulta); }
-.timeline__entry--cirugia .timeline__marker { background-color: var(--cat-cirugia); }
-.timeline__entry--laboratorio .timeline__marker { background-color: var(--cat-laboratorio); }
-
-.timeline__card {
-  background-color: var(--bg-page);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 18px 20px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.timeline__card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.timeline__meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  gap: 12px;
-}
-
-.tag {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
+#timeline-lista li strong {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #ffffff;
+  color: var(--accent-primary);
 }
 
-.tag--consulta { background-color: var(--cat-consulta); }
-.tag--cirugia { background-color: var(--cat-cirugia); }
-.tag--laboratorio { background-color: var(--cat-laboratorio); }
-
-.timeline__date {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.timeline__title {
+#timeline-lista li h3 {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin: 8px 0;
 }
 
-.timeline__excerpt {
-  font-size: 0.925rem;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
+.timeline__detail-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  margin-top: 12px;
+}
+
+.timeline__detail-btn:hover {
+  background: none;
+  color: var(--accent-primary-hover);
 }
 
 /* ==========================================================================
-   MODALES (<dialog>)
+   MODALES (DIALOGS NATIVOS)
    ========================================================================== */
-dialog.modal {
+dialog {
   border: none;
   border-radius: var(--radius-lg);
-  padding: 0;
-  max-width: 750px;
+  padding: 28px;
+  max-width: 600px;
   width: 90%;
   box-shadow: var(--shadow-lg);
   background: var(--bg-surface);
   margin: auto;
 }
 
-dialog.modal::backdrop {
+dialog::backdrop {
   background-color: rgba(27, 36, 32, 0.5);
   backdrop-filter: blur(2px);
 }
 
-.modal__form {
-  display: flex;
-  flex-direction: column;
-  max-height: 85vh;
-}
-
-.modal__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-surface);
-}
-
-.modal__header h2 {
+dialog h3 {
   font-family: var(--font-title);
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
 }
 
-.modal__close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-}
-
-.modal__close:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-page);
-}
-
-.modal__body {
-  padding: 24px;
-  overflow-y: auto;
-}
-
-.modal__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--bg-surface);
-}
-
-/* ==========================================================================
-   FORMULARIO Y GRID
-   ========================================================================== */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-field--tiny {
-  grid-column: span 1;
-}
-
-.form-field--wide {
-  grid-column: 1 / -1;
-}
-
-.form-field label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.form-field input,
-.form-field select,
-.form-field textarea {
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  padding: 10px 12px;
-  color: var(--text-primary);
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.form-field input:focus,
-.form-field select:focus,
-.form-field textarea:focus {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(31, 78, 95, 0.15);
-}
-
-.input-with-prefix {
-  display: flex;
-  align-items: center;
-}
-
-.input-prefix {
-  background-color: var(--bg-page);
-  border: 1px solid var(--border-color);
-  border-right: none;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-}
-
-.input-with-prefix input {
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  flex: 1;
-}
-
-.input-numerico {
-  font-family: var(--font-mono);
-  font-weight: 500;
-}
-
-.fieldset-ipss {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  background-color: var(--bg-page);
-}
-
-.fieldset-ipss legend {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--accent-primary);
-  padding: 0 6px;
-}
-
-.ipss-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.ipss-grid .form-field label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.detalle-sec {
-  margin-bottom: 16px;
+#modal-detalle-contenido p {
+  margin-bottom: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
 }
 
-.detalle-sec:last-child {
-  border-bottom: none;
-}
-
-.detalle-sec h4 {
+#modal-detalle-contenido p strong {
+  color: var(--text-primary);
+  display: block;
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--accent-primary);
-  margin-bottom: 6px;
-}
-
-@media (max-width: 640px) {
-  body { padding: 12px 8px; }
-  .app-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .search-bar__form { flex-direction: column; width: 100%; }
-  .form-grid { grid-template-columns: 1fr; }
-  .patient-card__actions { flex-direction: column; }
-  .btn { width: 100%; }
-  dialog.modal { width: 95%; }
+  margin-bottom: 4px;
 }
