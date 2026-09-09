@@ -2,100 +2,245 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Consultorio de Urología</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultorio Urológico</title>
+    
+    <!-- Fuentes Tipográficas del Sistema de Diseño -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+    
+    <!-- Hoja de Estilos -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- Buscador -->
-    <form id="form-buscar-paciente">
-        <input type="text" id="input-buscar-paciente" placeholder="Cédula o nombre">
-        <button type="submit">Buscar</button>
-    </form>
+    <!-- Encabezado de la Aplicación -->
+    <header class="app-header">
+        <div>
+            <h1 class="app-header__title">Consultorio Urológico</h1>
+            <p class="app-header__subtitle">Sistema de Historia Clínica e Historial Pacientes</p>
+        </div>
+        <div class="app-header__status">
+            <span class="status-dot status-dot--online"></span>
+            <span>Base de Datos Lista</span>
+        </div>
+    </header>
 
-    <button type="button" data-modal-target="modal-registrar-paciente">Nuevo Paciente</button>
+    <!-- Barra de Búsqueda y Acciones Rápidas -->
+    <div class="search-bar">
+        <form id="form-buscar-paciente" class="search-bar__form">
+            <div class="search-bar__field">
+                <input type="text" id="input-buscar-paciente" class="search-bar__input" placeholder="Buscar por número de cédula o nombre..." required>
+            </div>
+            <button type="submit" class="btn btn--primary">Buscar</button>
+        </form>
+        <button type="button" class="btn btn--secondary" data-modal-target="modal-registrar-paciente">+ Nuevo Paciente</button>
+    </div>
 
-    <!-- Ficha del Paciente -->
-    <div id="estado-vacio"><p>No hay paciente seleccionado.</p></div>
-    
-    <div id="ficha-paciente" hidden>
-        <h2 id="ficha-paciente-nombre"></h2>
-        <p><strong>Cédula:</strong> <span id="dato-cedula"></span></p>
-        <p><strong>Antecedentes:</strong> <span id="dato-antecedentes"></span></p>
-        <p><strong>Alergias:</strong> <span id="dato-alergias"></span></p>
+    <!-- Estado Inicial Sin Paciente -->
+    <div id="estado-vacio" class="empty-state">
+        <p>No hay un paciente seleccionado. Ingrese un número de cédula arriba para buscar o registrar un nuevo paciente.</p>
+    </div>
+
+    <!-- Ficha del Paciente Seleccionado -->
+    <section id="ficha-paciente" class="patient-card" hidden>
+        <h2 id="ficha-paciente-nombre" class="patient-card__name"></h2>
         
-        <button type="button" data-modal-target="modal-nueva-consulta">Nueva Consulta</button>
-        <button type="button" data-modal-target="modal-nueva-cirugia">Nuevo Procedimiento</button>
-    </div>
+        <div class="patient-card__details">
+            <div class="patient-card__detail">
+                <dt>Cédula de Identidad</dt>
+                <dd id="dato-cedula"></dd>
+            </div>
+            <div class="patient-card__detail patient-card__detail--wide">
+                <dt>Antecedentes Médicos</dt>
+                <dd id="dato-antecedentes"></dd>
+            </div>
+            <div class="patient-card__detail patient-card__detail--wide">
+                <dt>Alergias</dt>
+                <dd><span id="dato-alergias" class="patient-card__alergias"></span></dd>
+            </div>
+        </div>
 
-    <!-- Historial -->
-    <div id="seccion-historial" hidden>
-        <h3>Historial Clínico</h3>
-        <ul id="timeline-lista"></ul>
-    </div>
+        <div class="patient-card__actions">
+            <button type="button" class="btn btn--primary" data-modal-target="modal-nueva-consulta">+ Registrar Consulta</button>
+            <button type="button" class="btn btn--outline" data-modal-target="modal-nueva-cirugia">+ Registrar Procedimiento</button>
+        </div>
+    </section>
 
-    <!-- Modal Registrar Paciente -->
-    <dialog id="modal-registrar-paciente">
-        <form id="form-registrar-paciente">
-            <h3>Registrar Paciente</h3>
-            <select id="reg-tipo-cedula"><option value="V">V</option><option value="E">E</option></select>
-            <input type="text" id="reg-cedula" placeholder="Cédula" required>
-            <input type="text" id="reg-nombres" placeholder="Nombres" required>
-            <input type="text" id="reg-apellidos" placeholder="Apellidos" required>
-            <input type="date" id="reg-fecha-nacimiento">
-            <input type="text" id="reg-telefono" placeholder="Teléfono">
-            <input type="email" id="reg-email" placeholder="Email">
-            <textarea id="reg-antecedentes-medicos" placeholder="Antecedentes médicos"></textarea>
-            <textarea id="reg-antecedentes-quirurgicos" placeholder="Antecedentes quirúrgicos"></textarea>
-            <textarea id="reg-alergias" placeholder="Alergias"></textarea>
-            <button type="submit">Guardar</button>
-            <button type="button" data-modal-close>Cancelar</button>
+    <!-- Sección de Historial Clínico (Timeline) -->
+    <section id="seccion-historial" class="timeline-section" hidden>
+        <div class="timeline-section__header">
+            <h2>Historial Clínico Cronológico</h2>
+            <p class="timeline-section__hint">Consultas y procedimientos ordenados del más reciente al más antiguo.</p>
+        </div>
+        <ul id="timeline-lista" class="timeline"></ul>
+    </section>
+
+    <!-- Modal: Registrar Paciente -->
+    <dialog id="modal-registrar-paciente" class="modal">
+        <form id="form-registrar-paciente" class="modal__form">
+            <div class="modal__header">
+                <h2>Registrar Nuevo Paciente</h2>
+                <button type="button" class="modal__close" data-modal-close>&times;</button>
+            </div>
+            <div class="modal__body form-grid">
+                <div class="form-field">
+                    <label for="reg-tipo-cedula">Tipo</label>
+                    <select id="reg-tipo-cedula">
+                        <option value="V">V - Venezolano</option>
+                        <option value="E">E - Extranjero</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="reg-cedula">Cédula *</label>
+                    <input type="text" id="reg-cedula" placeholder="Ej. 12345678" required>
+                </div>
+                <div class="form-field">
+                    <label for="reg-nombres">Nombres *</label>
+                    <input type="text" id="reg-nombres" required>
+                </div>
+                <div class="form-field">
+                    <label for="reg-apellidos">Apellidos *</label>
+                    <input type="text" id="reg-apellidos" required>
+                </div>
+                <div class="form-field">
+                    <label for="reg-fecha-nacimiento">Fecha de Nacimiento</label>
+                    <input type="date" id="reg-fecha-nacimiento">
+                </div>
+                <div class="form-field">
+                    <label for="reg-telefono">Teléfono</label>
+                    <input type="tel" id="reg-telefono" placeholder="0412-0000000">
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="reg-email">Correo Electrónico</label>
+                    <input type="email" id="reg-email" placeholder="correo@ejemplo.com">
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="reg-antecedentes-medicos">Antecedentes Médicos</label>
+                    <textarea id="reg-antecedentes-medicos" placeholder="Hipertensión, Diabetes, Prostatitis previa..."></textarea>
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="reg-antecedentes-quirurgicos">Antecedentes Quirúrgicos</label>
+                    <textarea id="reg-antecedentes-quirurgicos" placeholder="Apendicectomía (2015)..."></textarea>
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="reg-alergias">Alergias Medicamentosas</label>
+                    <textarea id="reg-alergias" placeholder="Penicilina, AINEs, etc."></textarea>
+                </div>
+            </div>
+            <div class="modal__footer">
+                <button type="button" class="btn btn--ghost" data-modal-close>Cancelar</button>
+                <button type="submit" class="btn btn--primary">Guardar Paciente</button>
+            </div>
         </form>
     </dialog>
 
-    <!-- Modal Nueva Consulta -->
-    <dialog id="modal-nueva-consulta">
-        <form id="form-nueva-consulta">
-            <h3>Nueva Consulta Urológica</h3>
-            <input type="date" id="con-fecha">
-            <textarea id="con-motivo" placeholder="Motivo de la consulta" required></textarea>
-            <input type="number" id="con-ipss-vaciado" placeholder="IPSS Vaciado (0-5)">
-            <input type="number" id="con-ipss-frecuencia" placeholder="IPSS Frecuencia (0-5)">
-            <input type="text" id="con-tacto-rectal" placeholder="Examen Tacto Rectal">
-            <input type="number" step="0.01" id="con-psa-total" placeholder="PSA Total">
-            <input type="number" step="0.01" id="con-psa-libre" placeholder="PSA Libre">
-            <textarea id="con-diagnostico" placeholder="Diagnóstico" required></textarea>
-            <button type="submit">Guardar Consulta</button>
-            <button type="button" data-modal-close>Cancelar</button>
+    <!-- Modal: Nueva Consulta -->
+    <dialog id="modal-nueva-consulta" class="modal">
+        <form id="form-nueva-consulta" class="modal__form">
+            <div class="modal__header">
+                <h2>Nueva Consulta Urológica</h2>
+                <button type="button" class="modal__close" data-modal-close>&times;</button>
+            </div>
+            <div class="modal__body form-grid">
+                <div class="form-field form-field--wide">
+                    <label for="con-motivo">Motivo de Consulta *</label>
+                    <textarea id="con-motivo" placeholder="Describa el motivo de la consulta..." required></textarea>
+                </div>
+                <fieldset class="fieldset-ipss form-field--wide">
+                    <legend>Escala Sintomatología IPSS</legend>
+                    <div class="ipss-grid">
+                        <div class="form-field">
+                            <label for="con-ipss-vaciado">Sensación de vaciado incompleto (0-5)</label>
+                            <input type="number" id="con-ipss-vaciado" min="0" max="5" value="0">
+                        </div>
+                        <div class="form-field">
+                            <label for="con-ipss-frecuencia">Frecuencia miccional (0-5)</label>
+                            <input type="number" id="con-ipss-frecuencia" min="0" max="5" value="0">
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="form-field">
+                    <label for="con-psa-total">PSA Total (ng/mL)</label>
+                    <input type="number" step="0.01" id="con-psa-total" class="input-numerico" placeholder="0.00">
+                </div>
+                <div class="form-field">
+                    <label for="con-psa-libre">PSA Libre (ng/mL)</label>
+                    <input type="number" step="0.01" id="con-psa-libre" class="input-numerico" placeholder="0.00">
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="con-tacto-rectal">Examen Físico / Tacto Rectal</label>
+                    <input type="text" id="con-tacto-rectal" placeholder="Próstata fibroelástica, no dolorosa...">
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="con-diagnostico">Diagnóstico *</label>
+                    <textarea id="con-diagnostico" placeholder="Diagnóstico presuntivo o definitivo..." required></textarea>
+                </div>
+            </div>
+            <div class="modal__footer">
+                <button type="button" class="btn btn--ghost" data-modal-close>Cancelar</button>
+                <button type="submit" class="btn btn--primary">Registrar Consulta</button>
+            </div>
         </form>
     </dialog>
 
-    <!-- Modal Nuevo Procedimiento -->
-    <dialog id="modal-nueva-cirugia">
-        <form id="form-nueva-cirugia">
-            <h3>Nuevo Procedimiento Quirúrgico</h3>
-            <select id="cir-tipo" required>
-                <option value="RTUP - Resección Transuretral de Próstata">RTUP - Resección Transuretral de Próstata</option>
-                <option value="Biopsia de Próstata">Biopsia de Próstata</option>
-                <option value="Cistoscopia">Cistoscopia</option>
-                <option value="Litotricia">Litotricia</option>
-                <option value="Circuncisión">Circuncisión</option>
-                <option value="Vasectomía">Vasectomía</option>
-                <option value="Otro">Otro</option>
-            </select>
-            <textarea id="cir-diagnostico-pre" placeholder="Diagnóstico Preoperatorio"></textarea>
-            <textarea id="cir-protocolo" placeholder="Notas del cirujano"></textarea>
-            <button type="submit">Guardar Procedimiento</button>
-            <button type="button" data-modal-close>Cancelar</button>
+    <!-- Modal: Nuevo Procedimiento Quirúrgico -->
+    <dialog id="modal-nueva-cirugia" class="modal">
+        <form id="form-nueva-cirugia" class="modal__form">
+            <div class="modal__header">
+                <h2>Nuevo Procedimiento Quirúrgico</h2>
+                <button type="button" class="modal__close" data-modal-close>&times;</button>
+            </div>
+            <div class="modal__body form-grid">
+                <div class="form-field form-field--wide">
+                    <label for="cir-tipo">Tipo de Procedimiento *</label>
+                    <select id="cir-tipo" required>
+                        <option value="RTUP - Resección Transuretral de Próstata">RTUP - Resección Transuretral de Próstata</option>
+                        <option value="RTUV - Resección Transuretral de Vejiga">RTUV - Resección Transuretral de Vejiga</option>
+                        <option value="Biopsia de Próstata">Biopsia de Próstata</option>
+                        <option value="Cistoscopia">Cistoscopia</option>
+                        <option value="Litotricia">Litotricia</option>
+                        <option value="Prostatectomía Radical">Prostatectomía Radical</option>
+                        <option value="Nefrectomía">Nefrectomía</option>
+                        <option value="Ureteroscopia">Ureteroscopia</option>
+                        <option value="Colocación de Catéter Doble J">Colocación de Catéter Doble J</option>
+                        <option value="Circuncisión">Circuncisión</option>
+                        <option value="Vasectomía">Vasectomía</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="cir-diagnostico-pre">Diagnóstico Preoperatorio</label>
+                    <textarea id="cir-diagnostico-pre" placeholder="Indicación del procedimiento..."></textarea>
+                </div>
+                <div class="form-field form-field--wide">
+                    <label for="cir-protocolo">Protocolo Operatorio / Notas del Cirujano</label>
+                    <textarea id="cir-protocolo" placeholder="Detalles de la cirugía, técnica utilizada, hallazgos..."></textarea>
+                </div>
+            </div>
+            <div class="modal__footer">
+                <button type="button" class="btn btn--ghost" data-modal-close>Cancelar</button>
+                <button type="submit" class="btn btn--primary">Registrar Procedimiento</button>
+            </div>
         </form>
     </dialog>
 
-    <!-- Modal Detalle -->
-    <dialog id="modal-detalle-registro">
-        <h3>Detalle del Registro</h3>
-        <div id="modal-detalle-contenido"></div>
-        <button type="button" data-modal-close>Cerrar</button>
+    <!-- Modal: Detalle del Registro -->
+    <dialog id="modal-detalle-registro" class="modal">
+        <div class="modal__header">
+            <h2>Detalles del Registro Clínico</h2>
+            <button type="button" class="modal__close" data-modal-close>&times;</button>
+        </div>
+        <div id="modal-detalle-contenido" class="modal__body">
+            <!-- El contenido detallado se inserta desde Javascript -->
+        </div>
+        <div class="modal__footer">
+            <button type="button" class="btn btn--primary" data-modal-close>Cerrar</button>
+        </div>
     </dialog>
 
+    <!-- Script de la Aplicación -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
