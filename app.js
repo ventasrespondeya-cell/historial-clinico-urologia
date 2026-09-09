@@ -1,6 +1,3 @@
-/* ==========================================================================
-   1. CONFIGURACIÓN E INICIALIZACIÓN DE SUPABASE
-   ========================================================================== */
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const SUPABASE_URL = 'https://obwptfjxedepmahxpvnf.supabase.co';
@@ -8,13 +5,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_H93V7eiO1cOrLfvxab5rRg__mQMti2D';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Variables de estado global
 let pacienteActual = null;
 let registrosHistorial = [];
 
-/* ==========================================================================
-   2. EVENTOS PRINCIPALES
-   ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
     configurarModales();
     configurarEventosBusqueda();
@@ -32,16 +25,10 @@ function configurarEventosBusqueda() {
     }
 }
 
-/* ==========================================================================
-   3. MANEJO DE MODALES (VENTANAS DIALOG NATIVAS)
-   ========================================================================== */
 function configurarModales() {
-    // Abrir modales con atributo data-modal-target
     document.querySelectorAll('[data-modal-target]').forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.getAttribute('data-modal-target');
-            
-            // Validar que se haya seleccionado un paciente para consulta o cirugía
             if ((targetId === 'modal-nueva-consulta' || targetId === 'modal-nueva-cirugia') && !pacienteActual) {
                 alert('Por favor, busque y seleccione un paciente primero.');
                 return;
@@ -50,25 +37,10 @@ function configurarModales() {
         });
     });
 
-    // Cerrar modales con atributo data-modal-close
     document.querySelectorAll('[data-modal-close]').forEach(btn => {
         btn.addEventListener('click', () => {
             const dialog = btn.closest('dialog');
             if (dialog) cerrarModal(dialog);
-        });
-    });
-
-    // Cerrar modal al hacer clic en el fondo (backdrop)
-    document.querySelectorAll('dialog.modal').forEach(dialog => {
-        dialog.addEventListener('click', (e) => {
-            const rect = dialog.getBoundingClientRect();
-            const isInDialog = (
-                rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
-                rect.left <= e.clientX && e.clientX <= rect.left + rect.width
-            );
-            if (!isInDialog) {
-                cerrarModal(dialog);
-            }
         });
     });
 }
@@ -81,9 +53,7 @@ function abrirModal(modalId) {
 }
 
 function cerrarModal(dialog) {
-    if (typeof dialog === 'string') {
-        dialog = document.getElementById(dialog);
-    }
+    if (typeof dialog === 'string') dialog = document.getElementById(dialog);
     if (dialog && typeof dialog.close === 'function') {
         dialog.close();
         const form = dialog.querySelector('form');
@@ -91,27 +61,17 @@ function cerrarModal(dialog) {
     }
 }
 
-/* ==========================================================================
-   4. BÚSQUEDA Y FICHA DEL PACIENTE
-   ========================================================================== */
 async function buscarPaciente() {
     const input = document.getElementById('input-buscar-paciente');
     const termino = input ? input.value.trim() : '';
-
-    if (!termino) {
-        alert('Por favor, ingrese un número de cédula o nombre para buscar.');
-        return;
-    }
+    if (!termino) return alert('Ingrese un número de cédula o nombre.');
 
     try {
-        // Extraemos solo números para buscar cédulas incluso si tienen prefijo V- o E-
         const soloNumeros = termino.replace(/^[VEve]-?/, '');
-
-        // Búsqueda flexible por cédula, nombre o apellido
         const { data, error } = await supabase
             .from('pacientes')
             .select('*')
-            .or(`cedula.ilike.%${soloNumeros}%,nombres.ilike.%${termino}%,apellidos.ilike.%${termino}%`)
+            .or(`cedula.ilike.%${soloNumeros}%,nombre_completo.ilike.%${termino}%`)
             .limit(1);
 
         if (error) throw error;
@@ -123,31 +83,14 @@ async function buscarPaciente() {
         } else {
             pacienteActual = null;
             ocultarFichaPaciente();
-            alert('No se encontró ningún paciente con ese criterio. Puede registrarlo ahora.');
-            
-            // Prellenar cédula en el modal
+            alert('Paciente no encontrado.');
             const inputRegCedula = document.getElementById('reg-cedula');
-            if (inputRegCedula) {
-                inputRegCedula.value = soloNumeros;
-            }
+            if (inputRegCedula) inputRegCedula.value = soloNumeros;
             abrirModal('modal-registrar-paciente');
         }
     } catch (error) {
-        console.error('Error al buscar paciente:', error);
-        alert(`Ocurrió un error al consultar la base de datos: ${error.message || error}`);
+        alert(`Error al buscar: ${error.message || error}`);
     }
-}
-
-function calcularEdad(fechaNacimiento) {
-    if (!fechaNacimiento) return 'N/A';
-    const hoy = new Date();
-    const nac = new Date(fechaNacimiento);
-    let edad = hoy.getFullYear() - nac.getFullYear();
-    const mes = hoy.getMonth() - nac.getMonth();
-    if (mes < 0 || (mes === 0 && hoy.getDate() < nac.getDate())) {
-        edad--;
-    }
-    return isNaN(edad) ? 'N/A' : `${edad} años`;
 }
 
 function mostrarFichaPaciente(paciente) {
@@ -157,342 +100,196 @@ function mostrarFichaPaciente(paciente) {
 
     document.getElementById('ficha-paciente-nombre').innerText = `${paciente.apellidos}, ${paciente.nombres}`;
     document.getElementById('dato-cedula').innerText = paciente.cedula || 'N/A';
-    document.getElementById('dato-edad').innerText = calcularEdad(paciente.fecha_nacimiento);
-    document.getElementById('dato-telefono').innerText = paciente.telefono || 'N/A';
-    document.getElementById('dato-antecedentes').innerText = paciente.antecedentes_medicos || 'Ningún antecedente registrado.';
-    document.getElementById('dato-alergias').innerText = paciente.alergias || 'Sin alergias conocidas.';
+    
+    const antMedicos = typeof paciente.antecedentes_medicos === 'object' && paciente.antecedentes_medicos !== null
+        ? paciente.antecedentes_medicos.descripcion || ''
+        : paciente.antecedentes_medicos;
+
+    document.getElementById('dato-antecedentes').innerText = antMedicos || 'Sin antecedentes.';
+    document.getElementById('dato-alergias').innerText = paciente.alergias || 'Sin alergias.';
 }
 
 function ocultarFichaPaciente() {
     document.getElementById('estado-vacio').hidden = false;
     document.getElementById('ficha-paciente').hidden = true;
     document.getElementById('seccion-historial').hidden = true;
-    document.getElementById('timeline-lista').innerHTML = '';
 }
 
-/* ==========================================================================
-   5. HISTORIAL CRONOLÓGICO Y DETALLE
-   ========================================================================== */
 async function cargarHistorialCronologico(pacienteId) {
     const listaTimeline = document.getElementById('timeline-lista');
-    listaTimeline.innerHTML = '<li class="timeline__entry"><p>Cargando historial...</p></li>';
+    listaTimeline.innerHTML = '<li>Cargando historial...</li>';
 
     try {
         const [resConsultas, resCirugias] = await Promise.all([
             supabase.from('consultas_urologicas').select('*').eq('paciente_id', pacienteId),
-            supabase.from('cirugias_procedimientos').select('*').eq('paciente_id', pacienteId)
+            supabase.from('procedimientos_quirurgicos').select('*').eq('paciente_id', pacienteId)
         ]);
 
         if (resConsultas.error) throw resConsultas.error;
         if (resCirugias.error) throw resCirugias.error;
 
-        const consultas = resConsultas.data || [];
-        const cirugias = resCirugias.data || [];
-
         registrosHistorial = [
-            ...consultas.map(c => ({
+            ...resConsultas.data.map(c => ({
                 id: c.id,
                 tipoClase: 'consulta',
-                etiqueta: 'Consulta General',
+                etiqueta: 'Consulta',
                 rawFecha: new Date(c.fecha_consulta),
                 titulo: c.diagnostico ? `Consulta: ${c.diagnostico}` : 'Consulta Urológica',
-                extracto: c.motivo_consulta ? `Motivo: ${c.motivo_consulta}` : 'Sin extracto.',
+                extracto: c.motivo_consulta,
                 datosCompletos: c
             })),
-            ...cirugias.map(c => ({
+            ...resCirugias.data.map(c => ({
                 id: c.id,
                 tipoClase: 'cirugia',
-                etiqueta: 'Cirugía / Procedimiento',
+                etiqueta: 'Procedimiento',
                 rawFecha: new Date(c.fecha_procedimiento),
-                titulo: c.tipo_procedimiento || 'Procedimiento Quirúrgico',
-                extracto: c.diagnostico_preoperatorio ? `Dx Preop: ${c.diagnostico_preoperatorio}` : 'Procedimiento urológico.',
+                titulo: c.tipo_procedimiento,
+                extracto: c.diagnostico_preoperatorio || 'Procedimiento urológico',
                 datosCompletos: c
             }))
-        ];
-
-        // Ordenar descendentemente (más reciente primero)
-        registrosHistorial.sort((a, b) => b.rawFecha - a.rawFecha);
-
-        if (registrosHistorial.length === 0) {
-            listaTimeline.innerHTML = '<li class="timeline__entry"><p>No hay registros médicos en el historial de este paciente.</p></li>';
-            return;
-        }
+        ].sort((a, b) => b.rawFecha - a.rawFecha);
 
         listaTimeline.innerHTML = '';
         registrosHistorial.forEach(item => {
-            const fechaTxt = item.rawFecha.toLocaleDateString('es-VE', {
-                year: 'numeric', month: 'long', day: 'numeric'
-            });
-            const fechaIso = item.rawFecha.toISOString().split('T')[0];
-
             const li = document.createElement('li');
-            li.className = `timeline__entry timeline__entry--${item.tipoClase}`;
-            li.setAttribute('data-tipo', item.tipoClase);
-
             li.innerHTML = `
-                <span class="timeline__marker" aria-hidden="true"></span>
-                <article class="timeline__card">
-                  <div class="timeline__meta">
-                    <span class="tag tag--${item.tipoClase}">${item.etiqueta}</span>
-                    <time class="timeline__date" datetime="${fechaIso}">${fechaTxt}</time>
-                  </div>
-                  <h3 class="timeline__title">${item.titulo}</h3>
-                  <p class="timeline__excerpt">${item.extracto}</p>
-                  <button type="button" class="btn btn--link timeline__detail-btn" data-registro-id="${item.id}">Ver detalle completo</button>
-                </article>
+                <strong>${item.etiqueta}</strong> - ${item.rawFecha.toLocaleDateString()}<br>
+                <h3>${item.titulo}</h3>
+                <p>${item.extracto}</p>
+                <button type="button" class="timeline__detail-btn" data-registro-id="${item.id}">Ver detalle</button>
             `;
             listaTimeline.appendChild(li);
         });
-
     } catch (error) {
-        console.error('Error cargando historial:', error);
-        listaTimeline.innerHTML = '<li class="timeline__entry"><p>Error al cargar el historial clínico.</p></li>';
+        listaTimeline.innerHTML = '<li>Error al cargar el historial.</li>';
     }
 }
 
 function configurarDetallesHistorial() {
     const listaTimeline = document.getElementById('timeline-lista');
     if (!listaTimeline) return;
-
     listaTimeline.addEventListener('click', (e) => {
         if (e.target.classList.contains('timeline__detail-btn')) {
             const regId = e.target.getAttribute('data-registro-id');
             const item = registrosHistorial.find(r => r.id === regId);
-            if (item) {
-                mostrarDetalleModal(item);
-            }
+            if (item) mostrarDetalleModal(item);
         }
     });
 }
 
 function mostrarDetalleModal(item) {
     const contenedor = document.getElementById('modal-detalle-contenido');
-    const tituloModal = document.getElementById('modal-detalle-titulo');
-    
-    if (!contenedor || !tituloModal) return;
-
-    const fechaTxt = item.rawFecha.toLocaleDateString('es-VE', {
-        year: 'numeric', month: 'long', day: 'numeric'
-    });
-
-    tituloModal.innerText = `${item.etiqueta} - ${fechaTxt}`;
     const d = item.datosCompletos;
 
     if (item.tipoClase === 'consulta') {
-        let ipssTxt = 'No evaluado';
-        if (d.sintomatologia_ipss) {
-            if (typeof d.sintomatologia_ipss === 'object') {
-                ipssTxt = `Puntaje Total: ${d.sintomatologia_ipss.total || '-'} / 35 (Calidad de vida: ${d.sintomatologia_ipss.calidad_vida || '-'})`;
-            } else {
-                ipssTxt = d.sintomatologia_ipss;
-            }
-        }
-
         contenedor.innerHTML = `
-            <div class="detalle-sec">
-                <h4>Motivo de Consulta</h4>
-                <p>${d.motivo_consulta || 'No especificado'}</p>
-            </div>
-            <div class="detalle-sec">
-                <h4>Evaluación IPSS & Tacto Rectal</h4>
-                <p><strong>IPSS:</strong> ${ipssTxt}</p>
-                <p><strong>Tacto Rectal:</strong> ${d.examen_tacto_rectal || d.examen_fisico || 'No realizado'}</p>
-            </div>
-            <div class="detalle-sec">
-                <h4>Antígeno Prostático (PSA) & Ecografía</h4>
-                <p><strong>PSA Total:</strong> ${d.psa_total ? d.psa_total + ' ng/mL' : 'N/A'} | <strong>PSA Libre:</strong> ${d.psa_libre ? d.psa_libre + ' ng/mL' : 'N/A'}</p>
-                <p><strong>Hallazgos Eco:</strong> ${d.ecografia_hallazgos || 'No registrados'}</p>
-            </div>
-            <div class="detalle-sec">
-                <h4>Diagnóstico y Tratamiento</h4>
-                <p><strong>Diagnóstico:</strong> ${d.diagnostico || 'Pendiente'}</p>
-                <p><strong>Plan de Tratamiento:</strong> ${d.plan_tratamiento || 'Sin tratamiento indicado'}</p>
-            </div>
-            ${d.notas_adicionales ? `<div class="detalle-sec"><h4>Notas Adicionales</h4><p>${d.notas_adicionales}</p></div>` : ''}
+            <p><strong>Motivo:</strong> ${d.motivo_consulta}</p>
+            <p><strong>IPSS Total:</strong> ${d.puntaje_ipss_total || 'N/A'}</p>
+            <p><strong>PSA Total:</strong> ${d.psa_total || 'N/A'}</p>
+            <p><strong>Diagnóstico:</strong> ${d.diagnostico || 'N/A'}</p>
         `;
     } else {
         contenedor.innerHTML = `
-            <div class="detalle-sec">
-                <h4>Intervención</h4>
-                <p><strong>Tipo:</strong> ${d.tipo_procedimiento || 'Procedimiento'}</p>
-                <p><strong>Dx Preoperatorio:</strong> ${d.diagnostico_preoperatorio || 'N/A'}</p>
-                <p><strong>Dx Postoperatorio:</strong> ${d.diagnostico_postoperatorio || 'N/A'}</p>
-            </div>
-            <div class="detalle-sec">
-                <h4>Protocolo Operatorio & Hallazgos</h4>
-                <p><strong>Notas del Cirujano:</strong> ${d.cirujano_notas || 'Sin notas'}</p>
-                <p><strong>Hallazgos Quirúrgicos:</strong> ${d.hallazgos_quirurgicos || 'Sin hallazgos descritos'}</p>
-            </div>
-            <div class="detalle-sec">
-                <h4>Complicaciones & Plan Postoperatorio</h4>
-                <p><strong>Complicaciones:</strong> ${d.complicaciones || 'Ninguna registrada'}</p>
-                <p><strong>Plan Postoperatorio:</strong> ${d.plan_postoperatorio || 'Sin indicaciones'}</p>
-            </div>
+            <p><strong>Procedimiento:</strong> ${d.tipo_procedimiento}</p>
+            <p><strong>Dx Preop:</strong> ${d.diagnostico_preoperatorio || 'N/A'}</p>
+            <p><strong>Notas:</strong> ${d.cirujano_notas || 'N/A'}</p>
         `;
     }
-
     abrirModal('modal-detalle-registro');
 }
 
-/* ==========================================================================
-   6. GUARDAR FORMULARIOS EN SUPABASE
-   ========================================================================== */
 function configurarFormularios() {
     document.getElementById('form-registrar-paciente')?.addEventListener('submit', guardarPaciente);
     document.getElementById('form-nueva-consulta')?.addEventListener('submit', guardarConsulta);
     document.getElementById('form-nueva-cirugia')?.addEventListener('submit', guardarCirugia);
 }
 
-// Registrar nuevo paciente o actualizar existente (Lógica segura sin errores DB)
 async function guardarPaciente(e) {
     e.preventDefault();
-
-    const tipoCedula = document.getElementById('reg-tipo-cedula').value;
-    const numCedula = document.getElementById('reg-cedula').value.trim();
-    const tel = document.getElementById('reg-telefono').value.trim();
-    const cedulaCompleta = `${tipoCedula}-${numCedula}`;
+    const cedulaCompleta = `${document.getElementById('reg-tipo-cedula').value}-${document.getElementById('reg-cedula').value.trim()}`;
+    const textoAnt = document.getElementById('reg-antecedentes-medicos').value.trim();
 
     const datosPaciente = {
         cedula: cedulaCompleta,
         nombres: document.getElementById('reg-nombres').value.trim(),
         apellidos: document.getElementById('reg-apellidos').value.trim(),
         fecha_nacimiento: document.getElementById('reg-fecha-nacimiento').value || null,
-        telefono: tel ? `+58 ${tel}` : null,
+        telefono: document.getElementById('reg-telefono').value.trim() || null,
         email: document.getElementById('reg-email').value.trim() || null,
-        antecedentes_medicos: document.getElementById('reg-antecedentes-medicos').value.trim() || null,
+        antecedentes_medicos: textoAnt ? { descripcion: textoAnt } : {},
         antecedentes_quirurgicos: document.getElementById('reg-antecedentes-quirurgicos').value.trim() || null,
         alergias: document.getElementById('reg-alergias').value.trim() || null
     };
 
     try {
-        // 1. Verificamos primero si la cédula ya existe
-        const { data: existente, error: errorBusqueda } = await supabase
-            .from('pacientes')
-            .select('id')
-            .eq('cedula', cedulaCompleta)
-            .maybeSingle();
-
-        if (errorBusqueda) throw errorBusqueda;
-
-        let resultado = null;
-
+        const { data: existente } = await supabase.from('pacientes').select('id').eq('cedula', cedulaCompleta).maybeSingle();
+        let res;
         if (existente) {
-            // 2a. Si la cédula existe, actualizamos los datos del paciente existente
-            const { data, error } = await supabase
-                .from('pacientes')
-                .update(datosPaciente)
-                .eq('id', existente.id)
-                .select();
-
-            if (error) throw error;
-            resultado = data[0];
-            alert('Datos del paciente actualizados correctamente.');
+            res = await supabase.from('pacientes').update(datosPaciente).eq('id', existente.id).select();
         } else {
-            // 2b. Si no existe, insertamos un registro nuevo
-            const { data, error } = await supabase
-                .from('pacientes')
-                .insert([datosPaciente])
-                .select();
-
-            if (error) throw error;
-            resultado = data[0];
-            alert('Paciente registrado con éxito.');
+            res = await supabase.from('pacientes').insert([datosPaciente]).select();
         }
+        if (res.error) throw res.error;
 
+        alert('Paciente guardado.');
         cerrarModal('modal-registrar-paciente');
-
-        pacienteActual = resultado;
+        pacienteActual = res.data[0];
         mostrarFichaPaciente(pacienteActual);
         cargarHistorialCronologico(pacienteActual.id);
-
-    } catch (error) {
-        console.error('Error al guardar paciente:', error);
-        alert(`Error al guardar el paciente: ${error.message || JSON.stringify(error)}`);
+    } catch (err) {
+        alert(`Error al guardar paciente: ${err.message}`);
     }
 }
 
-// Registrar nueva consulta urológica
 async function guardarConsulta(e) {
     e.preventDefault();
-    if (!pacienteActual) return alert('Seleccione un paciente primero.');
+    if (!pacienteActual) return;
 
-    // Recolectar datos de IPSS
-    const ipssVaciado = parseInt(document.getElementById('con-ipss-vaciado').value) || 0;
-    const ipssFrecuencia = parseInt(document.getElementById('con-ipss-frecuencia').value) || 0;
-    const ipssIntermitencia = parseInt(document.getElementById('con-ipss-intermitencia').value) || 0;
-    const ipssUrgencia = parseInt(document.getElementById('con-ipss-urgencia').value) || 0;
-    const ipssChorro = parseInt(document.getElementById('con-ipss-chorro').value) || 0;
-    const ipssEsfuerzo = parseInt(document.getElementById('con-ipss-esfuerzo').value) || 0;
-    const ipssNocturia = parseInt(document.getElementById('con-ipss-nocturia').value) || 0;
-    const ipssCalidadVida = parseInt(document.getElementById('con-ipss-calidad-vida').value) || 0;
-
-    const ipssTotal = ipssVaciado + ipssFrecuencia + ipssIntermitencia + ipssUrgencia + ipssChorro + ipssEsfuerzo + ipssNocturia;
+    const ipssTotal = (parseInt(document.getElementById('con-ipss-vaciado')?.value) || 0) +
+                      (parseInt(document.getElementById('con-ipss-frecuencia')?.value) || 0);
 
     const nuevaConsulta = {
         paciente_id: pacienteActual.id,
-        fecha_consulta: document.getElementById('con-fecha').value ? new Date(document.getElementById('con-fecha').value).toISOString() : new Date().toISOString(),
+        fecha_consulta: new Date().toISOString(),
         motivo_consulta: document.getElementById('con-motivo').value.trim(),
-        sintomatologia_ipss: {
-            total: ipssTotal,
-            vaciado: ipssVaciado,
-            frecuencia: ipssFrecuencia,
-            intermitencia: ipssIntermitencia,
-            urgencia: ipssUrgencia,
-            chorro: ipssChorro,
-            esfuerzo: ipssEsfuerzo,
-            nocturia: ipssNocturia,
-            calidad_vida: ipssCalidadVida
-        },
-        examen_tacto_rectal: document.getElementById('con-tacto-rectal').value.trim() || null,
-        psa_total: parseFloat(document.getElementById('con-psa-total').value) || null,
-        psa_libre: parseFloat(document.getElementById('con-psa-libre').value) || null,
-        ecografia_hallazgos: document.getElementById('con-eco').value.trim() || null,
-        diagnostico: document.getElementById('con-diagnostico').value.trim(),
-        plan_tratamiento: document.getElementById('con-plan').value.trim() || null,
-        notas_adicionales: document.getElementById('con-notas').value.trim() || null
+        sintomatologia_ipss: { vaciado: parseInt(document.getElementById('con-ipss-vaciado')?.value) || 0 },
+        puntaje_ipss_total: ipssTotal,
+        examen_fisico: { tacto_rectal: document.getElementById('con-tacto-rectal')?.value.trim() || '' },
+        psa_total: parseFloat(document.getElementById('con-psa-total')?.value) || null,
+        psa_libre: parseFloat(document.getElementById('con-psa-libre')?.value) || null,
+        diagnostico: document.getElementById('con-diagnostico').value.trim()
     };
 
     try {
         const { error } = await supabase.from('consultas_urologicas').insert([nuevaConsulta]);
         if (error) throw error;
-
-        alert('Consulta urológica guardada exitosamente.');
+        alert('Consulta registrada.');
         cerrarModal('modal-nueva-consulta');
         cargarHistorialCronologico(pacienteActual.id);
-
-    } catch (error) {
-        console.error('Error al guardar consulta:', error);
-        alert(`Ocurrió un error al guardar la consulta: ${error.message || error}`);
+    } catch (err) {
+        alert(`Error al guardar consulta: ${err.message}`);
     }
 }
 
-// Registrar nueva cirugía o procedimiento
 async function guardarCirugia(e) {
     e.preventDefault();
-    if (!pacienteActual) return alert('Seleccione un paciente primero.');
+    if (!pacienteActual) return;
 
     const nuevaCirugia = {
         paciente_id: pacienteActual.id,
-        fecha_procedimiento: document.getElementById('cir-fecha').value ? new Date(document.getElementById('cir-fecha').value).toISOString() : new Date().toISOString(),
+        fecha_procedimiento: new Date().toISOString(),
         tipo_procedimiento: document.getElementById('cir-tipo').value,
         diagnostico_preoperatorio: document.getElementById('cir-diagnostico-pre').value.trim() || null,
-        diagnostico_postoperatorio: document.getElementById('cir-diagnostico-post').value.trim() || null,
-        cirujano_notas: document.getElementById('cir-protocolo').value.trim() || null,
-        hallazgos_quirurgicos: document.getElementById('cir-hallazgos').value.trim() || null,
-        complicaciones: document.getElementById('cir-complicaciones').value.trim() || null,
-        plan_postoperatorio: document.getElementById('cir-plan-post').value.trim() || null
+        cirujano_notas: document.getElementById('cir-protocolo').value.trim() || null
     };
 
     try {
-        const { error } = await supabase.from('cirugias_procedimientos').insert([nuevaCirugia]);
+        const { error } = await supabase.from('procedimientos_quirurgicos').insert([nuevaCirugia]);
         if (error) throw error;
-
-        alert('Procedimiento quirúrgico guardado exitosamente.');
+        alert('Procedimiento registrado.');
         cerrarModal('modal-nueva-cirugia');
         cargarHistorialCronologico(pacienteActual.id);
-
-    } catch (error) {
-        console.error('Error al guardar cirugía:', error);
-        alert(`Ocurrió un error al guardar el procedimiento: ${error.message || error}`);
+    } catch (err) {
+        alert(`Error al guardar procedimiento: ${err.message}`);
     }
 }
