@@ -104,10 +104,11 @@ async function buscarPaciente() {
     }
 
     try {
+        // Búsqueda exacta (eq) para cédula e ilike sin comodines para nombres/apellidos exactos ignorando mayúsculas/minúsculas
         const { data, error } = await supabase
             .from('pacientes')
             .select('*')
-            .or(`cedula.ilike.%${termino}%,nombres.ilike.%${termino}%,apellidos.ilike.%${termino}%`)
+            .or(`cedula.eq.${termino},nombres.ilike.${termino},apellidos.ilike.${termino}`)
             .limit(1);
 
         if (error) throw error;
@@ -340,7 +341,7 @@ function configurarFormularios() {
     document.getElementById('form-nueva-cirugia')?.addEventListener('submit', guardarCirugia);
 }
 
-// Registrar nuevo paciente
+// Registrar nuevo paciente o actualizar existente
 async function guardarPaciente(e) {
     e.preventDefault();
 
@@ -361,14 +362,15 @@ async function guardarPaciente(e) {
     };
 
     try {
+        // Se utiliza .upsert() en lugar de .insert()
         const { data, error } = await supabase
             .from('pacientes')
-            .insert([nuevoPaciente])
+            .upsert([nuevoPaciente], { onConflict: 'cedula' })
             .select();
 
         if (error) throw error;
 
-        alert('Paciente registrado exitosamente.');
+        alert('Paciente guardado exitosamente.');
         cerrarModal('modal-registrar-paciente');
 
         pacienteActual = data[0];
@@ -377,7 +379,7 @@ async function guardarPaciente(e) {
 
     } catch (error) {
         console.error('Error al guardar paciente:', error);
-        alert('Error al registrar el paciente. Verifique que la cédula no esté registrada.');
+        alert('Error al registrar el paciente.');
     }
 }
 
