@@ -1,92 +1,109 @@
 /* ==========================================================================
-   1. IMPORTACI”N Y CONFIGURACI”N DE SUPABASE
+   1. CONFIGURACI√ìN E INICIALIZACI√ìN DE SUPABASE
    ========================================================================== */
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// ?? IMPORTANTE: REEMPLAZA ESTOS VALORES CON TUS CREDENCIALES DE SUPABASE ??
-// Los encuentras en Supabase > Project Settings > API
-const SUPABASE_URL = 'https://obwptfjxedepmahxpvnf.supabase.com'; 
+const SUPABASE_URL = 'https://obwptfjxedepmahxpvnf.supabase.com';
 const SUPABASE_ANON_KEY = 'sb_publishable_H93V7eiO1cOrLfvxab5rRg__mQMti2D';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Variable global para almacenar el paciente seleccionado actualmente
+// Variables de estado global
 let pacienteActual = null;
+let registrosHistorial = [];
 
 /* ==========================================================================
-   2. INICIALIZACI”N DE EVENTOS (Cuando el DOM carga)
+   2. EVENTOS PRINCIPALES
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
     configurarModales();
-    configurarEventosPrincipales();
+    configurarEventosBusqueda();
+    configurarFormularios();
+    configurarDetallesHistorial();
 });
 
-function configurarEventosPrincipales() {
-    // B˙squeda de pacientes
-    document.getElementById('btnBuscarPaciente')?.addEventListener('click', buscarPaciente);
-    document.getElementById('inputBusqueda')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') buscarPaciente();
-    });
-
-    // Guardar formularios
-    document.getElementById('formPaciente')?.addEventListener('submit', guardarPaciente);
-    document.getElementById('formConsulta')?.addEventListener('submit', guardarConsulta);
-    document.getElementById('formCirugia')?.addEventListener('submit', guardarCirugia);
-}
-
-/* ==========================================================================
-   3. MANEJO DE MODALES (VENTANAS FLOTANTES)
-   ========================================================================== */
-function configurarModales() {
-    // Botones para abrir modales
-    document.getElementById('btnRegistrarPaciente')?.addEventListener('click', () => abrirModal('modalPaciente'));
-    document.getElementById('btnNuevaConsulta')?.addEventListener('click', () => abrirModal('modalConsulta'));
-    document.getElementById('btnNuevaCirugia')?.addEventListener('click', () => abrirModal('modalCirugia'));
-
-    // Botones (X) para cerrar
-    document.querySelectorAll('.close-modal').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const modalId = e.target.closest('.modal').id;
-            cerrarModal(modalId);
+function configurarEventosBusqueda() {
+    const formBuscar = document.getElementById('form-buscar-paciente');
+    if (formBuscar) {
+        formBuscar.addEventListener('submit', (e) => {
+            e.preventDefault();
+            buscarPaciente();
         });
-    });
-
-    // Cerrar al hacer clic fuera del contenido del modal
-    window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
-            cerrarModal(e.target.id);
-        }
-    });
-}
-
-function abrirModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) modal.classList.add('active');
-}
-
-function cerrarModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) {
-        modal.classList.remove('active');
-        // Opcional: Limpiar el formulario al cerrar
-        const form = modal.querySelector('form');
-        if(form) form.reset();
     }
 }
 
 /* ==========================================================================
-   4. B⁄SQUEDA DE PACIENTES
+   3. MANEJO DE MODALES (VENTANAS DIALOG NATIVAS)
+   ========================================================================== */
+function configurarModales() {
+    // Abrir modales con atributo data-modal-target
+    document.querySelectorAll('[data-modal-target]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-modal-target');
+            
+            // Validar que se haya seleccionado un paciente para consulta o cirug√≠a
+            if ((targetId === 'modal-nueva-consulta' || targetId === 'modal-nueva-cirugia') && !pacienteActual) {
+                alert('Por favor, busque y seleccione un paciente primero.');
+                return;
+            }
+            abrirModal(targetId);
+        });
+    });
+
+    // Cerrar modales con atributo data-modal-close
+    document.querySelectorAll('[data-modal-close]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const dialog = btn.closest('dialog');
+            if (dialog) cerrarModal(dialog);
+        });
+    });
+
+    // Cerrar modal al hacer clic en el fondo (backdrop)
+    document.querySelectorAll('dialog.modal').forEach(dialog => {
+        dialog.addEventListener('click', (e) => {
+            const rect = dialog.getBoundingClientRect();
+            const isInDialog = (
+                rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+                rect.left <= e.clientX && e.clientX <= rect.left + rect.width
+            );
+            if (!isInDialog) {
+                cerrarModal(dialog);
+            }
+        });
+    });
+}
+
+function abrirModal(modalId) {
+    const dialog = document.getElementById(modalId);
+    if (dialog && typeof dialog.showModal === 'function') {
+        dialog.showModal();
+    }
+}
+
+function cerrarModal(dialog) {
+    if (typeof dialog === 'string') {
+        dialog = document.getElementById(dialog);
+    }
+    if (dialog && typeof dialog.close === 'function') {
+        dialog.close();
+        const form = dialog.querySelector('form');
+        if (form) form.reset();
+    }
+}
+
+/* ==========================================================================
+   4. B√öSQUEDA Y FICHA DEL PACIENTE
    ========================================================================== */
 async function buscarPaciente() {
-    const termino = document.getElementById('inputBusqueda').value.trim();
-    
+    const input = document.getElementById('input-buscar-paciente');
+    const termino = input ? input.value.trim() : '';
+
     if (!termino) {
-        alert("Por favor, ingrese una cÈdula o nombre para buscar.");
+        alert('Por favor, ingrese un n√∫mero de c√©dula o nombre para buscar.');
         return;
     }
 
     try {
-        // Buscar en Supabase por cÈdula o nombre/apellido ignorando may˙sculas/min˙sculas (ilike)
         const { data, error } = await supabase
             .from('pacientes')
             .select('*')
@@ -96,158 +113,251 @@ async function buscarPaciente() {
         if (error) throw error;
 
         if (data && data.length > 0) {
-            // Paciente encontrado
             pacienteActual = data[0];
             mostrarFichaPaciente(pacienteActual);
             cargarHistorialCronologico(pacienteActual.id);
         } else {
-            // Paciente no encontrado
             pacienteActual = null;
             ocultarFichaPaciente();
-            alert("Paciente no encontrado. Puede registrarlo ahora.");
+            alert('No se encontr√≥ ning√∫n paciente con ese criterio. Puede registrarlo ahora.');
             
-            // Abrir modal y prellenar cÈdula si el tÈrmino parece una cÈdula venezolana
-            abrirModal('modalPaciente');
-            if(termino.toUpperCase().startsWith('V-') || termino.toUpperCase().startsWith('E-')) {
-                const inputCedula = document.getElementById('pacienteCedula');
-                if(inputCedula) inputCedula.value = termino.toUpperCase();
+            // Prellenar c√©dula en el modal si el t√©rmino parece una c√©dula
+            const inputRegCedula = document.getElementById('reg-cedula');
+            if (inputRegCedula) {
+                const limpia = termino.replace(/^[VEve]-?/, '');
+                inputRegCedula.value = limpia;
             }
+            abrirModal('modal-registrar-paciente');
         }
     } catch (error) {
-        console.error("Error en la b˙squeda:", error);
-        alert("OcurriÛ un error al buscar en la base de datos.");
+        console.error('Error al buscar paciente:', error);
+        alert('Ocurri√≥ un error al consultar la base de datos.');
     }
+}
+
+function calcularEdad(fechaNacimiento) {
+    if (!fechaNacimiento) return 'N/A';
+    const hoy = new Date();
+    const nac = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const mes = hoy.getMonth() - nac.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nac.getDate())) {
+        edad--;
+    }
+    return isNaN(edad) ? 'N/A' : `${edad} a√±os`;
 }
 
 function mostrarFichaPaciente(paciente) {
-    // Mostrar el contenedor de la ficha
-    document.getElementById('fichaPacienteContainer').style.display = 'block';
-    
-    // Habilitar los botones de nueva consulta/cirugÌa
-    document.getElementById('btnNuevaConsulta').disabled = false;
-    document.getElementById('btnNuevaCirugia').disabled = false;
+    document.getElementById('estado-vacio').hidden = true;
+    document.getElementById('ficha-paciente').hidden = false;
+    document.getElementById('seccion-historial').hidden = false;
 
-    // Rellenar datos en el HTML (Aseg˙rate de que estos IDs existan en tu index.html)
-    document.getElementById('displayCedula').innerText = paciente.cedula || 'N/A';
-    document.getElementById('displayNombre').innerText = `${paciente.nombres} ${paciente.apellidos}`;
-    document.getElementById('displayTelefono').innerText = paciente.telefono || 'N/A';
-    document.getElementById('displayAntecedentes').innerText = paciente.antecedentes_medicos || 'Ninguno registrado';
-    document.getElementById('displayAlergias').innerText = paciente.alergias || 'Sin alergias conocidas';
+    document.getElementById('ficha-paciente-nombre').innerText = `${paciente.apellidos}, ${paciente.nombres}`;
+    document.getElementById('dato-cedula').innerText = paciente.cedula || 'N/A';
+    document.getElementById('dato-edad').innerText = calcularEdad(paciente.fecha_nacimiento);
+    document.getElementById('dato-telefono').innerText = paciente.telefono || 'N/A';
+    document.getElementById('dato-antecedentes').innerText = paciente.antecedentes_medicos || 'Ning√∫n antecedente registrado.';
+    document.getElementById('dato-alergias').innerText = paciente.alergias || 'Sin alergias conocidas.';
 }
 
 function ocultarFichaPaciente() {
-    const contenedor = document.getElementById('fichaPacienteContainer');
-    if(contenedor) contenedor.style.display = 'none';
-    
-    document.getElementById('btnNuevaConsulta').disabled = true;
-    document.getElementById('btnNuevaCirugia').disabled = true;
-    document.getElementById('timelineContainer').innerHTML = ''; // Limpiar timeline
+    document.getElementById('estado-vacio').hidden = false;
+    document.getElementById('ficha-paciente').hidden = true;
+    document.getElementById('seccion-historial').hidden = true;
+    document.getElementById('timeline-lista').innerHTML = '';
 }
 
 /* ==========================================================================
-   5. HISTORIAL CRONOL”GICO DESCENDENTE (TIMELINE)
+   5. HISTORIAL CRONOL√ìGICO Y DETALLE
    ========================================================================== */
 async function cargarHistorialCronologico(pacienteId) {
-    const contenedor = document.getElementById('timelineContainer');
-    contenedor.innerHTML = '<p>Cargando historial...</p>';
+    const listaTimeline = document.getElementById('timeline-lista');
+    listaTimeline.innerHTML = '<li class="timeline__entry"><p>Cargando historial...</p></li>';
 
     try {
-        // 1. Obtener Consultas
-        const { data: consultas, error: errConsultas } = await supabase
-            .from('consultas_urologicas')
-            .select('*')
-            .eq('paciente_id', pacienteId);
-        if (errConsultas) throw errConsultas;
+        const [resConsultas, resCirugias] = await Promise.all([
+            supabase.from('consultas_urologicas').select('*').eq('paciente_id', pacienteId),
+            supabase.from('cirugias_procedimientos').select('*').eq('paciente_id', pacienteId)
+        ]);
 
-        // 2. Obtener CirugÌas/Procedimientos
-        const { data: cirugias, error: errCirugias } = await supabase
-            .from('cirugias_procedimientos')
-            .select('*')
-            .eq('paciente_id', pacienteId);
-        if (errCirugias) throw errCirugias;
+        if (resConsultas.error) throw resConsultas.error;
+        if (resCirugias.error) throw resCirugias.error;
 
-        // 3. Unir y Formatear Listas
-        const historial = [
+        const consultas = resConsultas.data || [];
+        const cirugias = resCirugias.data || [];
+
+        registrosHistorial = [
             ...consultas.map(c => ({
                 id: c.id,
-                tipo: 'Consulta',
-                fecha: new Date(c.fecha_consulta),
-                titulo: 'Consulta UrolÛgica',
-                descripcion: `Motivo: ${c.motivo_consulta}`,
-                detalles: `DiagnÛstico: ${c.diagnostico || 'N/A'}<br>Plan: ${c.plan_tratamiento || 'N/A'} <br>PSA Total: ${c.psa_total || '-'}`,
-                claseBadge: 'badge-consulta'
+                tipoClase: 'consulta',
+                etiqueta: 'Consulta General',
+                rawFecha: new Date(c.fecha_consulta),
+                titulo: c.diagnostico ? `Consulta: ${c.diagnostico}` : 'Consulta Urol√≥gica',
+                extracto: c.motivo_consulta ? `Motivo: ${c.motivo_consulta}` : 'Sin extracto.',
+                datosCompletos: c
             })),
             ...cirugias.map(c => ({
                 id: c.id,
-                tipo: 'CirugÌa/Procedimiento',
-                fecha: new Date(c.fecha_procedimiento),
-                titulo: c.tipo_procedimiento,
-                descripcion: `DiagnÛstico Preoperatorio: ${c.diagnostico_preoperatorio}`,
-                detalles: `Hallazgos: ${c.hallazgos_quirurgicos || 'N/A'}<br>Complicaciones: ${c.complicaciones || 'Ninguna'}`,
-                claseBadge: 'badge-cirugia'
+                tipoClase: 'cirugia',
+                etiqueta: 'Cirug√≠a / Procedimiento',
+                rawFecha: new Date(c.fecha_procedimiento),
+                titulo: c.tipo_procedimiento || 'Procedimiento Quir√∫rgico',
+                extracto: c.diagnostico_preoperatorio ? `Dx Preop: ${c.diagnostico_preoperatorio}` : 'Procedimiento urol√≥gico.',
+                datosCompletos: c
             }))
         ];
 
-        // 4. Ordenar cronolÛgicamente (Descendente: m·s reciente primero)
-        historial.sort((a, b) => b.fecha - a.fecha);
+        // Ordenar descendentemente (m√°s reciente primero)
+        registrosHistorial.sort((a, b) => b.rawFecha - a.rawFecha);
 
-        // 5. Renderizar en el HTML
-        if (historial.length === 0) {
-            contenedor.innerHTML = '<p>No hay registros mÈdicos para este paciente.</p>';
+        if (registrosHistorial.length === 0) {
+            listaTimeline.innerHTML = '<li class="timeline__entry"><p>No hay registros m√©dicos en el historial de este paciente.</p></li>';
             return;
         }
 
-        contenedor.innerHTML = ''; // Limpiar mensaje de carga
-        const divTimeline = document.createElement('div');
-        divTimeline.className = 'timeline';
-
-        historial.forEach(item => {
-            const fechaFormateada = item.fecha.toLocaleDateString('es-VE', { 
-                year: 'numeric', month: 'short', day: 'numeric' 
+        listaTimeline.innerHTML = '';
+        registrosHistorial.forEach(item => {
+            const fechaTxt = item.rawFecha.toLocaleDateString('es-VE', {
+                year: 'numeric', month: 'long', day: 'numeric'
             });
+            const fechaIso = item.rawFecha.toISOString().split('T')[0];
 
-            const elemento = `
-                <div class="timeline-item">
-                    <div class="timeline-card">
-                        <div class="timeline-header">
-                            <span class="timeline-date">${fechaFormateada}</span>
-                            <span class="badge ${item.claseBadge}">${item.tipo}</span>
-                        </div>
-                        <div class="timeline-content">
-                            <h3>${item.titulo}</h3>
-                            <p><strong>${item.descripcion}</strong></p>
-                            <p class="details" style="font-size: 0.9em; color: var(--gray-600);">${item.detalles}</p>
-                        </div>
-                    </div>
-                </div>
+            const li = document.createElement('li');
+            li.className = `timeline__entry timeline__entry--${item.tipoClase}`;
+            li.setAttribute('data-tipo', item.tipoClase);
+
+            li.innerHTML = `
+                <span class="timeline__marker" aria-hidden="true"></span>
+                <article class="timeline__card">
+                  <div class="timeline__meta">
+                    <span class="tag tag--${item.tipoClase}">${item.etiqueta}</span>
+                    <time class="timeline__date" datetime="${fechaIso}">${fechaTxt}</time>
+                  </div>
+                  <h3 class="timeline__title">${item.titulo}</h3>
+                  <p class="timeline__excerpt">${item.extracto}</p>
+                  <button type="button" class="btn btn--link timeline__detail-btn" data-registro-id="${item.id}">Ver detalle completo</button>
+                </article>
             `;
-            divTimeline.innerHTML += elemento;
+            listaTimeline.appendChild(li);
         });
 
-        contenedor.appendChild(divTimeline);
-
     } catch (error) {
-        console.error("Error cargando historial:", error);
-        contenedor.innerHTML = '<p>Error al cargar el historial clÌnico.</p>';
+        console.error('Error cargando historial:', error);
+        listaTimeline.innerHTML = '<li class="timeline__entry"><p>Error al cargar el historial cl√≠nico.</p></li>';
     }
 }
 
-/* ==========================================================================
-   6. GUARDAR NUEVOS REGISTROS
-   ========================================================================== */
+function configurarDetallesHistorial() {
+    const listaTimeline = document.getElementById('timeline-lista');
+    if (!listaTimeline) return;
 
-// Registrar Paciente Nuevo
+    listaTimeline.addEventListener('click', (e) => {
+        if (e.target.classList.contains('timeline__detail-btn')) {
+            const regId = e.target.getAttribute('data-registro-id');
+            const item = registrosHistorial.find(r => r.id === regId);
+            if (item) {
+                mostrarDetalleModal(item);
+            }
+        }
+    });
+}
+
+function mostrarDetalleModal(item) {
+    const contenedor = document.getElementById('modal-detalle-contenido');
+    const tituloModal = document.getElementById('modal-detalle-titulo');
+    
+    if (!contenedor || !tituloModal) return;
+
+    const fechaTxt = item.rawFecha.toLocaleDateString('es-VE', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    tituloModal.innerText = `${item.etiqueta} - ${fechaTxt}`;
+    const d = item.datosCompletos;
+
+    if (item.tipoClase === 'consulta') {
+        let ipssTxt = 'No evaluado';
+        if (d.sintomatologia_ipss) {
+            if (typeof d.sintomatologia_ipss === 'object') {
+                ipssTxt = `Puntaje Total: ${d.sintomatologia_ipss.total || '-'} / 35 (Calidad de vida: ${d.sintomatologia_ipss.calidad_vida || '-'})`;
+            } else {
+                ipssTxt = d.sintomatologia_ipss;
+            }
+        }
+
+        contenedor.innerHTML = `
+            <div class="detalle-sec">
+                <h4>Motivo de Consulta</h4>
+                <p>${d.motivo_consulta || 'No especificado'}</p>
+            </div>
+            <div class="detalle-sec">
+                <h4>Evaluaci√≥n IPSS & Tacto Rectal</h4>
+                <p><strong>IPSS:</strong> ${ipssTxt}</p>
+                <p><strong>Tacto Rectal:</strong> ${d.examen_tacto_rectal || d.examen_fisico || 'No realizado'}</p>
+            </div>
+            <div class="detalle-sec">
+                <h4>Ant√≠geno Prost√°tico (PSA) & Ecograf√≠a</h4>
+                <p><strong>PSA Total:</strong> ${d.psa_total ? d.psa_total + ' ng/mL' : 'N/A'} | <strong>PSA Libre:</strong> ${d.psa_libre ? d.psa_libre + ' ng/mL' : 'N/A'}</p>
+                <p><strong>Hallazgos Eco:</strong> ${d.ecografia_hallazgos || 'No registrados'}</p>
+            </div>
+            <div class="detalle-sec">
+                <h4>Diagn√≥stico y Tratamiento</h4>
+                <p><strong>Diagn√≥stico:</strong> ${d.diagnostico || 'Pendiente'}</p>
+                <p><strong>Plan de Tratamiento:</strong> ${d.plan_tratamiento || 'Sin tratamiento indicado'}</p>
+            </div>
+            ${d.notas_adicionales ? `<div class="detalle-sec"><h4>Notas Adicionales</h4><p>${d.notas_adicionales}</p></div>` : ''}
+        `;
+    } else {
+        contenedor.innerHTML = `
+            <div class="detalle-sec">
+                <h4>Intervenci√≥n</h4>
+                <p><strong>Tipo:</strong> ${d.tipo_procedimiento || 'Procedimiento'}</p>
+                <p><strong>Dx Preoperatorio:</strong> ${d.diagnostico_preoperatorio || 'N/A'}</p>
+                <p><strong>Dx Postoperatorio:</strong> ${d.diagnostico_postoperatorio || 'N/A'}</p>
+            </div>
+            <div class="detalle-sec">
+                <h4>Protocolo Operatorio & Hallazgos</h4>
+                <p><strong>Notas del Cirujano:</strong> ${d.cirujano_notas || 'Sin notas'}</p>
+                <p><strong>Hallazgos Quir√∫rgicos:</strong> ${d.hallazgos_quirurgicos || 'Sin hallazgos descritos'}</p>
+            </div>
+            <div class="detalle-sec">
+                <h4>Complicaciones & Plan Postoperatorio</h4>
+                <p><strong>Complicaciones:</strong> ${d.complicaciones || 'Ninguna registrada'}</p>
+                <p><strong>Plan Postoperatorio:</strong> ${d.plan_postoperatorio || 'Sin indicaciones'}</p>
+            </div>
+        `;
+    }
+
+    abrirModal('modal-detalle-registro');
+}
+
+/* ==========================================================================
+   6. GUARDAR FORMULARIOS EN SUPABASE
+   ========================================================================== */
+function configurarFormularios() {
+    document.getElementById('form-registrar-paciente')?.addEventListener('submit', guardarPaciente);
+    document.getElementById('form-nueva-consulta')?.addEventListener('submit', guardarConsulta);
+    document.getElementById('form-nueva-cirugia')?.addEventListener('submit', guardarCirugia);
+}
+
+// Registrar nuevo paciente
 async function guardarPaciente(e) {
     e.preventDefault();
-    
-    // Recolectar datos
+
+    const tipoCedula = document.getElementById('reg-tipo-cedula').value;
+    const numCedula = document.getElementById('reg-cedula').value.trim();
+    const tel = document.getElementById('reg-telefono').value.trim();
+
     const nuevoPaciente = {
-        cedula: document.getElementById('pacienteCedula').value.toUpperCase().trim(),
-        nombres: document.getElementById('pacienteNombres').value.trim(),
-        apellidos: document.getElementById('pacienteApellidos').value.trim(),
-        telefono: document.getElementById('pacienteTelefono').value.trim(),
-        antecedentes_medicos: document.getElementById('pacienteAntecedentes').value.trim(),
-        alergias: document.getElementById('pacienteAlergias').value.trim(),
+        cedula: `${tipoCedula}-${numCedula}`,
+        nombres: document.getElementById('reg-nombres').value.trim(),
+        apellidos: document.getElementById('reg-apellidos').value.trim(),
+        fecha_nacimiento: document.getElementById('reg-fecha-nacimiento').value || null,
+        telefono: tel ? `+58 ${tel}` : null,
+        email: document.getElementById('reg-email').value.trim() || null,
+        antecedentes_medicos: document.getElementById('reg-antecedentes-medicos').value.trim() || null,
+        antecedentes_quirurgicos: document.getElementById('reg-antecedentes-quirurgicos').value.trim() || null,
+        alergias: document.getElementById('reg-alergias').value.trim() || null
     };
 
     try {
@@ -258,77 +368,101 @@ async function guardarPaciente(e) {
 
         if (error) throw error;
 
-        alert("Paciente registrado exitosamente.");
-        cerrarModal('modalPaciente');
-        
-        // Cargar inmediatamente el nuevo paciente en pantalla
+        alert('Paciente registrado exitosamente.');
+        cerrarModal('modal-registrar-paciente');
+
         pacienteActual = data[0];
         mostrarFichaPaciente(pacienteActual);
         cargarHistorialCronologico(pacienteActual.id);
-        
+
     } catch (error) {
-        console.error("Error guardando paciente:", error);
-        alert("Error al registrar paciente. Verifica que la cÈdula no estÈ duplicada.");
+        console.error('Error al guardar paciente:', error);
+        alert('Error al registrar el paciente. Verifique que la c√©dula no est√© registrada.');
     }
 }
 
-// Registrar Nueva Consulta
+// Registrar nueva consulta urol√≥gica
 async function guardarConsulta(e) {
     e.preventDefault();
-    if(!pacienteActual) return alert("Seleccione un paciente primero");
+    if (!pacienteActual) return alert('Seleccione un paciente primero.');
+
+    // Recolectar datos de IPSS
+    const ipssVaciado = parseInt(document.getElementById('con-ipss-vaciado').value) || 0;
+    const ipssFrecuencia = parseInt(document.getElementById('con-ipss-frecuencia').value) || 0;
+    const ipssIntermitencia = parseInt(document.getElementById('con-ipss-intermitencia').value) || 0;
+    const ipssUrgencia = parseInt(document.getElementById('con-ipss-urgencia').value) || 0;
+    const ipssChorro = parseInt(document.getElementById('con-ipss-chorro').value) || 0;
+    const ipssEsfuerzo = parseInt(document.getElementById('con-ipss-esfuerzo').value) || 0;
+    const ipssNocturia = parseInt(document.getElementById('con-ipss-nocturia').value) || 0;
+    const ipssCalidadVida = parseInt(document.getElementById('con-ipss-calidad-vida').value) || 0;
+
+    const ipssTotal = ipssVaciado + ipssFrecuencia + ipssIntermitencia + ipssUrgencia + ipssChorro + ipssEsfuerzo + ipssNocturia;
 
     const nuevaConsulta = {
         paciente_id: pacienteActual.id,
-        fecha_consulta: document.getElementById('consultaFecha').value || new Date().toISOString(),
-        motivo_consulta: document.getElementById('consultaMotivo').value.trim(),
-        sintomatologia_ipss: document.getElementById('consultaIpss').value || null,
-        psa_total: document.getElementById('consultaPsaTotal').value || null,
-        psa_libre: document.getElementById('consultaPsaLibre').value || null,
-        examen_fisico: document.getElementById('consultaExamen').value.trim(),
-        diagnostico: document.getElementById('consultaDiagnostico').value.trim(),
-        plan_tratamiento: document.getElementById('consultaPlan').value.trim()
+        fecha_consulta: document.getElementById('con-fecha').value ? new Date(document.getElementById('con-fecha').value).toISOString() : new Date().toISOString(),
+        motivo_consulta: document.getElementById('con-motivo').value.trim(),
+        sintomatologia_ipss: {
+            total: ipssTotal,
+            vaciado: ipssVaciado,
+            frecuencia: ipssFrecuencia,
+            intermitencia: ipssIntermitencia,
+            urgencia: ipssUrgencia,
+            chorro: ipssChorro,
+            esfuerzo: ipssEsfuerzo,
+            nocturia: ipssNocturia,
+            calidad_vida: ipssCalidadVida
+        },
+        examen_tacto_rectal: document.getElementById('con-tacto-rectal').value.trim() || null,
+        psa_total: parseFloat(document.getElementById('con-psa-total').value) || null,
+        psa_libre: parseFloat(document.getElementById('con-psa-libre').value) || null,
+        ecografia_hallazgos: document.getElementById('con-eco').value.trim() || null,
+        diagnostico: document.getElementById('con-diagnostico').value.trim(),
+        plan_tratamiento: document.getElementById('con-plan').value.trim() || null,
+        notas_adicionales: document.getElementById('con-notas').value.trim() || null
     };
 
     try {
         const { error } = await supabase.from('consultas_urologicas').insert([nuevaConsulta]);
         if (error) throw error;
 
-        alert("Consulta guardada exitosamente.");
-        cerrarModal('modalConsulta');
-        cargarHistorialCronologico(pacienteActual.id); // Actualizar timeline
+        alert('Consulta urol√≥gica guardada exitosamente.');
+        cerrarModal('modal-nueva-consulta');
+        cargarHistorialCronologico(pacienteActual.id);
 
     } catch (error) {
-        console.error("Error guardando consulta:", error);
-        alert("Error al guardar la consulta.");
+        console.error('Error al guardar consulta:', error);
+        alert('Ocurri√≥ un error al guardar la consulta.');
     }
 }
 
-// Registrar Nueva CirugÌa / Procedimiento
+// Registrar nueva cirug√≠a o procedimiento
 async function guardarCirugia(e) {
     e.preventDefault();
-    if(!pacienteActual) return alert("Seleccione un paciente primero");
+    if (!pacienteActual) return alert('Seleccione un paciente primero.');
 
     const nuevaCirugia = {
         paciente_id: pacienteActual.id,
-        fecha_procedimiento: document.getElementById('cirugiaFecha').value || new Date().toISOString(),
-        tipo_procedimiento: document.getElementById('cirugiaTipo').value.trim(),
-        diagnostico_preoperatorio: document.getElementById('cirugiaDxPre').value.trim(),
-        hallazgos_quirurgicos: document.getElementById('cirugiaHallazgos').value.trim(),
-        cirujano_notas: document.getElementById('cirugiaProtocolo').value.trim(), // Protocolo operatorio
-        complicaciones: document.getElementById('cirugiaComplicaciones').value.trim(),
-        plan_postoperatorio: document.getElementById('cirugiaPlanPost').value.trim()
+        fecha_procedimiento: document.getElementById('cir-fecha').value ? new Date(document.getElementById('cir-fecha').value).toISOString() : new Date().toISOString(),
+        tipo_procedimiento: document.getElementById('cir-tipo').value,
+        diagnostico_preoperatorio: document.getElementById('cir-diagnostico-pre').value.trim() || null,
+        diagnostico_postoperatorio: document.getElementById('cir-diagnostico-post').value.trim() || null,
+        cirujano_notas: document.getElementById('cir-protocolo').value.trim() || null,
+        hallazgos_quirurgicos: document.getElementById('cir-hallazgos').value.trim() || null,
+        complicaciones: document.getElementById('cir-complicaciones').value.trim() || null,
+        plan_postoperatorio: document.getElementById('cir-plan-post').value.trim() || null
     };
 
     try {
         const { error } = await supabase.from('cirugias_procedimientos').insert([nuevaCirugia]);
         if (error) throw error;
 
-        alert("CirugÌa/Procedimiento guardado exitosamente.");
-        cerrarModal('modalCirugia');
-        cargarHistorialCronologico(pacienteActual.id); // Actualizar timeline
+        alert('Procedimiento quir√∫rgico guardado exitosamente.');
+        cerrarModal('modal-nueva-cirugia');
+        cargarHistorialCronologico(pacienteActual.id);
 
     } catch (error) {
-        console.error("Error guardando cirugÌa:", error);
-        alert("Error al guardar el procedimiento quir˙rgico.");
+        console.error('Error al guardar cirug√≠a:', error);
+        alert('Ocurri√≥ un error al guardar el procedimiento.');
     }
 }
