@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es-VE">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Historial Clínico · Urología</title>
+  <meta name="description" content="Sistema de historial clínico para consultorio de urología: búsqueda de pacientes, consultas, cirugías y resultados de laboratorio.">
+  <meta name="theme-color" content="#F5F7F5">
+
+  <!--
+    TOKENS DE DISEÑO (referencia para styles.css)
+    Fondo página:        #F5F7F5   Superficie/tarjeta: #FFFFFF   Borde: #DCE3DE
+    Texto principal:      #1B2420   Texto secundario:    #5C6B62
+    Acento primario:      #1F4E5F  (azul-petróleo, botones/foco)
+    Categoría Consulta:   #A9782F  (ocre)
+    Categoría Cirugía:    #9C4A3E  (rojo ladrillo apagado)
+    Categoría Laboratorio:#2E7D6B  (verde-azulado clínico)
+    Tipografía: "Source Serif 4" (títulos) · "IBM Plex Sans" (UI/cuerpo) · "IBM Plex Mono" (cifras de laboratorio)
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
+
+  <!-- ================= ENCABEZADO ================= -->
+  <header class="app-header">
+    <div class="app-header__brand">
+      <h1 class="app-header__title">Sistema de Historial Clínico</h1>
+      <p class="app-header__subtitle">Consultorio de Urología</p>
+    </div>
+    <div class="app-header__status" role="status">
+      <span class="status-dot status-dot--online" aria-hidden="true"></span>
+      <span class="app-header__status-text">Sistema en línea</span>
+    </div>
+  </header>
+
+  <!-- ================= BARRA DE BÚSQUEDA ================= -->
+  <section class="search-bar" aria-label="Búsqueda de pacientes">
+    <form class="search-bar__form" id="form-buscar-paciente" role="search">
+      <div class="search-bar__field">
+        <svg class="search-bar__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"></circle>
+          <line x1="16.6" y1="16.6" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+        </svg>
+        <label class="sr-only" for="input-buscar-paciente">Buscar por cédula o nombre</label>
+        <input
+          type="text"
+          id="input-buscar-paciente"
+          name="busqueda"
+          class="search-bar__input"
+          placeholder="Cédula (ej. V-12345678) o nombre del paciente"
+          autocomplete="off">
+      </div>
+      <button type="submit" class="btn btn--primary search-bar__submit">Buscar paciente</button>
+    </form>
+
+    <button type="button" class="btn btn--secondary" id="btn-nuevo-paciente" data-modal-target="modal-registrar-paciente">
+      <span aria-hidden="true">+</span> Registrar nuevo paciente
+    </button>
+  </section>
+
+  <main id="contenido-principal" class="app-main">
+
+    <!-- Estado antes de realizar una búsqueda. app.js la muestra cuando no hay paciente cargado. -->
+    <section class="empty-state" id="estado-vacio" hidden>
+      <p>Busca un paciente por cédula o nombre para ver su historial clínico.</p>
+    </section>
+
+    <!-- ================= FICHA DEL PACIENTE ================= -->
+    <!-- Contenido de ejemplo para previsualizar el diseño; app.js reemplaza estos valores
+         y controla la visibilidad (oculta hasta que se seleccione un paciente). -->
+    <section class="patient-card" id="ficha-paciente" aria-labelledby="ficha-paciente-nombre">
+      <div class="patient-card__identity">
+        <h2 class="patient-card__name" id="ficha-paciente-nombre">González, Pedro Antonio</h2>
+        <dl class="patient-card__details">
+          <div class="patient-card__detail">
+            <dt>Cédula</dt>
+            <dd id="dato-cedula">V-12.345.678</dd>
+          </div>
+          <div class="patient-card__detail">
+            <dt>Edad</dt>
+            <dd id="dato-edad">64 años</dd>
+          </div>
+          <div class="patient-card__detail">
+            <dt>Teléfono</dt>
+            <dd id="dato-telefono">+58 412-1234567</dd>
+          </div>
+          <div class="patient-card__detail patient-card__detail--wide">
+            <dt>Antecedentes médicos</dt>
+            <dd id="dato-antecedentes">Hipertensión arterial controlada. Diabetes tipo 2.</dd>
+          </div>
+          <div class="patient-card__detail patient-card__detail--wide">
+            <dt>Alergias</dt>
+            <dd id="dato-alergias" class="patient-card__alergias">Penicilina</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="patient-card__actions">
+        <button type="button" class="btn btn--primary" id="btn-nueva-consulta" data-modal-target="modal-nueva-consulta">
+          <span aria-hidden="true">+</span> Nueva consulta
+        </button>
+        <button type="button" class="btn btn--outline" id="btn-nueva-cirugia" data-modal-target="modal-nueva-cirugia">
+          <span aria-hidden="true">+</span> Nueva cirugía / procedimiento
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= HISTORIAL CRONOLÓGICO ================= -->
+    <section class="timeline-section" aria-labelledby="timeline-titulo" id="seccion-historial">
+      <div class="timeline-section__header">
+        <h2 id="timeline-titulo">Historial clínico</h2>
+        <p class="timeline-section__hint">Del registro más reciente al más antiguo</p>
+      </div>
+
+      <ol class="timeline" id="timeline-lista">
+
+        <!-- Ejemplo: Consulta General -->
+        <li class="timeline__entry timeline__entry--consulta" data-tipo="consulta">
+          <span class="timeline__marker" aria-hidden="true"></span>
+          <article class="timeline__card">
+            <div class="timeline__meta">
+              <span class="tag tag--consulta">Consulta General</span>
+              <time class="timeline__date" datetime="2026-09-03">3 de septiembre de 2026</time>
+            </div>
+            <h3 class="timeline__title">Control por hiperplasia prostática benigna</h3>
+            <p class="timeline__excerpt">IPSS moderado. Se ajusta tratamiento farmacológico y se solicita control de PSA.</p>
+            <button type="button" class="btn btn--link timeline__detail-btn" data-registro-id="con-001" data-registro-tipo="consulta">Ver detalle completo</button>
+          </article>
+        </li>
+
+        <!-- Ejemplo: Laboratorio / PSA -->
+        <li class="timeline__entry timeline__entry--laboratorio" data-tipo="laboratorio">
+          <span class="timeline__marker" aria-hidden="true"></span>
+          <article class="timeline__card">
+            <div class="timeline__meta">
+              <span class="tag tag--laboratorio">Laboratorio / PSA</span>
+              <time class="timeline__date" datetime="2026-08-18">18 de agosto de 2026</time>
+            </div>
+            <h3 class="timeline__title">PSA total 4.8 ng/mL</h3>
+            <p class="timeline__excerpt">Relación PSA libre/total: 18%. Se recomienda correlación con tacto rectal.</p>
+            <button type="button" class="btn btn--link timeline__detail-btn" data-registro-id="con-002" data-registro-tipo="laboratorio">Ver detalle completo</button>
+          </article>
+        </li>
+
+        <!-- Ejemplo: Cirugía / Procedimiento -->
+        <li class="timeline__entry timeline__entry--cirugia" data-tipo="cirugia">
+          <span class="timeline__marker" aria-hidden="true"></span>
+          <article class="timeline__card">
+            <div class="timeline__meta">
+              <span class="tag tag--cirugia">Cirugía / Procedimiento</span>
+              <time class="timeline__date" datetime="2026-07-02">2 de julio de 2026</time>
+            </div>
+            <h3 class="timeline__title">RTUP por hiperplasia prostática</h3>
+            <p class="timeline__excerpt">Procedimiento sin complicaciones. Sonda Foley por 48 horas.</p>
+            <button type="button" class="btn btn--link timeline__detail-btn" data-registro-id="cir-001" data-registro-tipo="cirugia">Ver detalle completo</button>
+          </article>
+        </li>
+
+      </ol>
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL: REGISTRAR PACIENTE ================= -->
+  <dialog class="modal" id="modal-registrar-paciente" aria-labelledby="modal-registrar-paciente-titulo">
+    <form method="dialog" class="modal__form" id="form-registrar-paciente">
+      <header class="modal__header">
+        <h2 id="modal-registrar-paciente-titulo">Registrar nuevo paciente</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Cerrar formulario">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <div class="form-grid">
+          <div class="form-field form-field--tiny">
+            <label for="reg-tipo-cedula">Tipo</label>
+            <select id="reg-tipo-cedula" name="tipo_cedula" required>
+              <option value="V">V</option>
+              <option value="E">E</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="reg-cedula">Número de cédula</label>
+            <input type="text" id="reg-cedula" name="cedula" placeholder="12345678" required>
+          </div>
+          <div class="form-field">
+            <label for="reg-nombres">Nombres</label>
+            <input type="text" id="reg-nombres" name="nombres" required>
+          </div>
+          <div class="form-field">
+            <label for="reg-apellidos">Apellidos</label>
+            <input type="text" id="reg-apellidos" name="apellidos" required>
+          </div>
+          <div class="form-field">
+            <label for="reg-fecha-nacimiento">Fecha de nacimiento</label>
+            <input type="date" id="reg-fecha-nacimiento" name="fecha_nacimiento">
+          </div>
+          <div class="form-field">
+            <label for="reg-telefono">Teléfono</label>
+            <div class="input-with-prefix">
+              <span class="input-prefix">+58</span>
+              <input type="tel" id="reg-telefono" name="telefono" placeholder="412-1234567">
+            </div>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="reg-email">Correo electrónico</label>
+            <input type="email" id="reg-email" name="email">
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="reg-antecedentes-medicos">Antecedentes médicos</label>
+            <textarea id="reg-antecedentes-medicos" name="antecedentes_medicos" rows="3" placeholder="Hipertensión, diabetes, cardiopatías…"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="reg-antecedentes-quirurgicos">Antecedentes quirúrgicos</label>
+            <textarea id="reg-antecedentes-quirurgicos" name="antecedentes_quirurgicos" rows="2"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="reg-alergias">Alergias</label>
+            <input type="text" id="reg-alergias" name="alergias" placeholder="Penicilina, yodo, ninguna conocida…">
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-modal-close>Cancelar</button>
+        <button type="submit" class="btn btn--primary">Guardar paciente</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- ================= MODAL: NUEVA CONSULTA UROLÓGICA ================= -->
+  <dialog class="modal" id="modal-nueva-consulta" aria-labelledby="modal-nueva-consulta-titulo">
+    <form method="dialog" class="modal__form" id="form-nueva-consulta">
+      <header class="modal__header">
+        <h2 id="modal-nueva-consulta-titulo">Nueva consulta urológica</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Cerrar formulario">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="con-fecha">Fecha de la consulta</label>
+            <input type="date" id="con-fecha" name="fecha_consulta" required>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="con-motivo">Motivo de consulta</label>
+            <input type="text" id="con-motivo" name="motivo_consulta" required>
+          </div>
+
+          <fieldset class="form-field form-field--wide fieldset-ipss">
+            <legend>Cuestionario de síntomas IPSS</legend>
+            <div class="ipss-grid">
+              <div class="form-field">
+                <label for="con-ipss-vaciado">Sensación de vaciado incompleto (0-5)</label>
+                <input type="number" id="con-ipss-vaciado" name="ipss_vaciado_incompleto" min="0" max="5">
+              </div>
+              <div class="form-field">
+                <label for="con-ipss-frecuencia">Frecuencia urinaria (0-5)</label>
+                <input type="number" id="con-ipss-frecuencia" name="ipss_frecuencia" min="0" max="5">
+              </div>
+              <div class="form-field">
+                <label for="con-ipss-intermitencia">Intermitencia del chorro (0-5)</label>
+                <input type="number" id="con-ipss-intermitencia" name="ipss_intermitencia" min="0" max="5">
+              </div>
+              <div class="form-field">
+                <label for="con-ipss-urgencia">Urgencia miccional (0-5)</label>
+                <input type="number" id="con-ipss-urgencia" name="ipss_urgencia" min="0" max="5">
+              </div>
+              <div class="form-field">
+                <label for="con-ipss-chorro">Debilidad del chorro (0-5)</label>
+                <input type="number" id="con-ipss-chorro" name="ipss_chorro_debil" min="0" max="5">
+              </div>
+              <div class="form-field">
+                <label for="con-ipss-esfuerzo">Esfuerzo miccional (0-5)</label>
+                <input type="number" id="con-ipss-esfuerzo" name="ipss_esfuerzo" min="0" max="5">
+              </div>
+              <div class="form-field">
+                <label for="con-ipss-nocturia">Nocturia, veces por noche (0-5)</label>
+                <input type="number" id="con-ipss-nocturia" name="ipss_nocturia" min="0" max="5">
+              </div>
+              <div class="form-field">
+                <label for="con-ipss-calidad-vida">Calidad de vida (0-6)</label>
+                <input type="number" id="con-ipss-calidad-vida" name="ipss_calidad_vida" min="0" max="6">
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="form-field form-field--wide">
+            <label for="con-tacto-rectal">Tacto rectal</label>
+            <textarea id="con-tacto-rectal" name="examen_tacto_rectal" rows="2" placeholder="Tamaño, consistencia, superficie, sensibilidad…"></textarea>
+          </div>
+          <div class="form-field">
+            <label for="con-psa-total">PSA total (ng/mL)</label>
+            <input type="number" step="0.01" min="0" id="con-psa-total" name="psa_total" class="input-numerico">
+          </div>
+          <div class="form-field">
+            <label for="con-psa-libre">PSA libre (ng/mL)</label>
+            <input type="number" step="0.01" min="0" id="con-psa-libre" name="psa_libre" class="input-numerico">
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="con-eco">Hallazgos ecográficos</label>
+            <textarea id="con-eco" name="ecografia_hallazgos" rows="2"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="con-diagnostico">Diagnóstico</label>
+            <textarea id="con-diagnostico" name="diagnostico" rows="2" required></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="con-plan">Plan de tratamiento</label>
+            <textarea id="con-plan" name="plan_tratamiento" rows="3"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="con-notas">Notas adicionales</label>
+            <textarea id="con-notas" name="notas_adicionales" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-modal-close>Cancelar</button>
+        <button type="submit" class="btn btn--primary">Guardar consulta</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- ================= MODAL: NUEVA CIRUGÍA / PROCEDIMIENTO ================= -->
+  <dialog class="modal" id="modal-nueva-cirugia" aria-labelledby="modal-nueva-cirugia-titulo">
+    <form method="dialog" class="modal__form" id="form-nueva-cirugia">
+      <header class="modal__header">
+        <h2 id="modal-nueva-cirugia-titulo">Nueva cirugía / procedimiento</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Cerrar formulario">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="cir-fecha">Fecha del procedimiento</label>
+            <input type="date" id="cir-fecha" name="fecha_procedimiento" required>
+          </div>
+
+          <!-- Los "value" coinciden exactamente con el CHECK de tipo_procedimiento en el esquema SQL -->
+          <div class="form-field form-field--wide">
+            <label for="cir-tipo">Tipo de intervención</label>
+            <select id="cir-tipo" name="tipo_procedimiento" required>
+              <option value="" disabled selected>Selecciona un tipo</option>
+              <option value="RTUP - Resección Transuretral de Próstata">RTUP - Resección Transuretral de Próstata</option>
+              <option value="RTUV - Resección Transuretral de Vejiga">RTUV - Resección Transuretral de Vejiga</option>
+              <option value="Biopsia de Próstata">Biopsia de Próstata</option>
+              <option value="Cistoscopia">Cistoscopia</option>
+              <option value="Litotricia">Litotricia</option>
+              <option value="Prostatectomía Radical">Prostatectomía Radical</option>
+              <option value="Nefrectomía">Nefrectomía</option>
+              <option value="Ureteroscopia">Ureteroscopia</option>
+              <option value="Colocación de Catéter Doble J">Colocación de Catéter Doble J</option>
+              <option value="Circuncisión">Circuncisión</option>
+              <option value="Vasectomía">Vasectomía</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="form-field form-field--wide">
+            <label for="cir-diagnostico-pre">Diagnóstico preoperatorio</label>
+            <textarea id="cir-diagnostico-pre" name="diagnostico_preoperatorio" rows="2"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="cir-diagnostico-post">Diagnóstico postoperatorio</label>
+            <textarea id="cir-diagnostico-post" name="diagnostico_postoperatorio" rows="2"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="cir-protocolo">Protocolo operatorio / notas del cirujano</label>
+            <textarea id="cir-protocolo" name="cirujano_notas" rows="4" placeholder="Descripción de la técnica empleada…"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="cir-hallazgos">Hallazgos quirúrgicos</label>
+            <textarea id="cir-hallazgos" name="hallazgos_quirurgicos" rows="2"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="cir-complicaciones">Complicaciones</label>
+            <textarea id="cir-complicaciones" name="complicaciones" rows="2" placeholder="Ninguna conocida…"></textarea>
+          </div>
+          <div class="form-field form-field--wide">
+            <label for="cir-plan-post">Plan postoperatorio</label>
+            <textarea id="cir-plan-post" name="plan_postoperatorio" rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-modal-close>Cancelar</button>
+        <button type="submit" class="btn btn--primary">Guardar procedimiento</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- ================= MODAL: DETALLE DE REGISTRO ================= -->
+  <!-- Se abre desde "Ver detalle completo". app.js llena #modal-detalle-contenido según el registro. -->
+  <dialog class="modal modal--detalle" id="modal-detalle-registro" aria-labelledby="modal-detalle-titulo">
+    <div class="modal__form">
+      <header class="modal__header">
+        <h2 id="modal-detalle-titulo">Detalle del registro</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Cerrar detalle">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </header>
+      <div class="modal__body" id="modal-detalle-contenido">
+        <p class="modal__placeholder">El contenido de este registro se cargará aquí.</p>
+      </div>
+      <footer class="modal__footer">
+        <button type="button" class="btn btn--ghost" data-modal-close>Cerrar</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
