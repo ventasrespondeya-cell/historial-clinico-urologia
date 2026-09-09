@@ -104,11 +104,14 @@ async function buscarPaciente() {
     }
 
     try {
-        // Búsqueda exacta (eq) para cédula e ilike sin comodines para nombres/apellidos exactos ignorando mayúsculas/minúsculas
+        // Extraemos solo números para buscar cédulas incluso si tienen prefijo V- o E-
+        const soloNumeros = termino.replace(/^[VEve]-?/, '');
+
+        // Búsqueda flexible por cédula, nombre o apellido
         const { data, error } = await supabase
             .from('pacientes')
             .select('*')
-            .or(`cedula.eq.${termino},nombres.ilike.${termino},apellidos.ilike.${termino}`)
+            .or(`cedula.ilike.%${soloNumeros}%,nombres.ilike.%${termino}%,apellidos.ilike.%${termino}%`)
             .limit(1);
 
         if (error) throw error;
@@ -122,17 +125,16 @@ async function buscarPaciente() {
             ocultarFichaPaciente();
             alert('No se encontró ningún paciente con ese criterio. Puede registrarlo ahora.');
             
-            // Prellenar cédula en el modal si el término parece una cédula
+            // Prellenar cédula en el modal
             const inputRegCedula = document.getElementById('reg-cedula');
             if (inputRegCedula) {
-                const limpia = termino.replace(/^[VEve]-?/, '');
-                inputRegCedula.value = limpia;
+                inputRegCedula.value = soloNumeros;
             }
             abrirModal('modal-registrar-paciente');
         }
     } catch (error) {
         console.error('Error al buscar paciente:', error);
-        alert('Ocurrió un error al consultar la base de datos.');
+        alert(`Ocurrió un error al consultar la base de datos: ${error.message || error}`);
     }
 }
 
@@ -341,16 +343,17 @@ function configurarFormularios() {
     document.getElementById('form-nueva-cirugia')?.addEventListener('submit', guardarCirugia);
 }
 
-// Registrar nuevo paciente o actualizar existente
+// Registrar nuevo paciente o actualizar existente (Lógica segura sin errores DB)
 async function guardarPaciente(e) {
     e.preventDefault();
 
     const tipoCedula = document.getElementById('reg-tipo-cedula').value;
     const numCedula = document.getElementById('reg-cedula').value.trim();
     const tel = document.getElementById('reg-telefono').value.trim();
+    const cedulaCompleta = `${tipoCedula}-${numCedula}`;
 
-    const nuevoPaciente = {
-        cedula: `${tipoCedula}-${numCedula}`,
+    const datosPaciente = {
+        cedula: cedulaCompleta,
         nombres: document.getElementById('reg-nombres').value.trim(),
         apellidos: document.getElementById('reg-apellidos').value.trim(),
         fecha_nacimiento: document.getElementById('reg-fecha-nacimiento').value || null,
@@ -362,24 +365,49 @@ async function guardarPaciente(e) {
     };
 
     try {
-        // Se utiliza .upsert() en lugar de .insert()
-        const { data, error } = await supabase
+        // 1. Verificamos primero si la cédula ya existe
+        const { data: existente, error: errorBusqueda } = await supabase
             .from('pacientes')
-            .upsert([nuevoPaciente], { onConflict: 'cedula' })
-            .select();
+            .select('id')
+            .eq('cedula', cedulaCompleta)
+            .maybeSingle();
 
-        if (error) throw error;
+        if (errorBusqueda) throw errorBusqueda;
 
-        alert('Paciente guardado exitosamente.');
+        let resultado = null;
+
+        if (existente) {
+            // 2a. Si la cédula existe, actualizamos los datos del paciente existente
+            const { data, error } = await supabase
+                .from('pacientes')
+                .update(datosPaciente)
+                .eq('id', existente.id)
+                .select();
+
+            if (error) throw error;
+            resultado = data[0];
+            alert('Datos del paciente actualizados correctamente.');
+        } else {
+            // 2b. Si no existe, insertamos un registro nuevo
+            const { data, error } = await supabase
+                .from('pacientes')
+                .insert([datosPaciente])
+                .select();
+
+            if (error) throw error;
+            resultado = data[0];
+            alert('Paciente registrado con éxito.');
+        }
+
         cerrarModal('modal-registrar-paciente');
 
-        pacienteActual = data[0];
+        pacienteActual = resultado;
         mostrarFichaPaciente(pacienteActual);
         cargarHistorialCronologico(pacienteActual.id);
 
     } catch (error) {
         console.error('Error al guardar paciente:', error);
-        alert('Error al registrar el paciente.');
+        alert(`Error al guardar el paciente: ${error.message || JSON.stringify(error)}`);
     }
 }
 
@@ -434,7 +462,7 @@ async function guardarConsulta(e) {
 
     } catch (error) {
         console.error('Error al guardar consulta:', error);
-        alert('Ocurrió un error al guardar la consulta.');
+        alert(`Ocurrió un error al guardar la consulta: ${error.message || error}`);
     }
 }
 
@@ -465,6 +493,6 @@ async function guardarCirugia(e) {
 
     } catch (error) {
         console.error('Error al guardar cirugía:', error);
-        alert('Ocurrió un error al guardar el procedimiento.');
+        alert(`Ocurrió un error al guardar el procedimiento: ${error.message || error}`);
     }
 }
