@@ -3,7 +3,7 @@
    ========================================================================== */
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-const SUPABASE_URL = 'https://obwptfjxedepmahxpvnf.supabase.com';
+const SUPABASE_URL = 'https://obwptfjxedepmahxpvnf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_H93V7eiO1cOrLfvxab5rRg__mQMti2D';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
